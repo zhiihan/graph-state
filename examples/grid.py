@@ -30,7 +30,7 @@ class Grid(GraphState):
 
 g = Grid(height, width)
 g.make_grid()
-print(g.edges)
+print(nx.to_numpy_array(g.to_networkx()))
 g.draw()
 #N = nx.to_numpy_array(g.to_networkx())
 #print(N)
