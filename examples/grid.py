@@ -4,28 +4,33 @@ import networkx as nx
 
 # Use 30 qubits
 results = []
-height = 2
-width = 3
-g = GraphState(height*width)
+height = 5
+width = 5 #should be same as height for now
 dicts = []
 
-for j in range(height):
-    for i in range(width-1):
-        dicts.append((i+j*width, (i+1)+j*width))
+class Grid(GraphState):
+    def __init__(self, width, height):
+        self.height = height
+        self.width = width
+        super().__init__(width*height)
+        self.edges = []
+        
+    def make_grid(self):
+        for j in range(self.height):
+            for i in range(self.width-1):
+                self.edges.append((i+j*self.width, (i+1)+j*self.width))
 
-for j in range(height-1):
-    for i in range(width):
-        dicts.append((i+j*width, i+(j+1)*width))
+        for j in range(self.height-1):
+            for i in range(self.width):
+                self.edges.append((i+j*width, i+(j+1)*width))
 
-print(dicts)
-
-
-
+        for e in self.edges:
+            self.add_edge(*e)
 
 
-for i in dicts:
-    g.add_edge(*i)
-
+g = Grid(height, width)
+g.make_grid()
+print(g.edges)
 g.draw()
 #N = nx.to_numpy_array(g.to_networkx())
 #print(N)
