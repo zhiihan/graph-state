@@ -5,8 +5,8 @@ import networkx as nx
 
 # Use 30 qubits
 results = []
-height = 2
-width = 2 #should be same as height for now
+height = 3
+width = 3 #should be same as height for now
 dicts = []
 
 class Grid(GraphState):
@@ -35,6 +35,7 @@ class Grid(GraphState):
 
     def damage_grid(self, p):
         # p is the probability of losing a qubit
+
         for i in range(self.height*self.width):
             if random.random() < p:
                 g.measure(i)
@@ -44,7 +45,7 @@ class Grid(GraphState):
 
 g = Grid(height, width)
 
-g.measure(1)
+g.damage_grid(0.24)
 
 
 n = g.to_networkx()
