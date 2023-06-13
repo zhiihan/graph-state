@@ -5,9 +5,9 @@ import json
 from textwrap import dedent as d
 import numpy as np
 
-height = 2
-width = 2
-length = 2
+height = 5
+width = 5
+length = 5
 
 g = Grid([height, width, length])
 gnx = g.to_networkx()
@@ -79,6 +79,10 @@ trace_nodes = go.Scatter3d(
 #Include the traces we want to plot and create a figure
 data = [trace_nodes, trace_edges]
 fig = go.Figure(data=data)
+fig.layout.height = 800
+fig.update_layout(
+   margin=dict(l=0, r=0, t=0, b=0)
+)
 
 import dash
 from dash import dcc, html
