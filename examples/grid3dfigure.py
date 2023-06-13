@@ -11,7 +11,7 @@ length = 4
 
 g = Grid([height, width, length])
 
-def update_rule(g):
+def update_plot(g):
     gnx = g.to_networkx()
     # plt.figure(figsize=(5,5))
     edges = gnx.edges()
@@ -19,9 +19,9 @@ def update_rule(g):
     # we need to seperate the X,Y,Z coordinates for Plotly
     # NOTE: g.node_coords is a dictionary where the keys are 1,...,6
 
-    x_nodes = [g.node_coords[key][0] for key in g.node_coords.keys()] # x-coordinates of nodes
-    y_nodes = [g.node_coords[key][1] for key in g.node_coords.keys()] # y-coordinates
-    z_nodes = [g.node_coords[key][2] for key in g.node_coords.keys()] # z-coordinates
+    x_nodes = [g.node_coords[key][0] for key in g.node_coords.keys() if key not in g.removed_nodes] # x-coordinates of nodes
+    y_nodes = [g.node_coords[key][1] for key in g.node_coords.keys() if key not in g.removed_nodes] # y-coordinates
+    z_nodes = [g.node_coords[key][2] for key in g.node_coords.keys() if key not in g.removed_nodes] # z-coordinates
 
     #we need to create lists that contain the starting and ending coordinates of each edge.
     x_edges=[]
@@ -80,7 +80,7 @@ def update_rule(g):
     )
     return fig
 
-fig = update_rule(g)
+fig = update_plot(g)
 
 import dash
 from dash import dcc, html
@@ -132,7 +132,12 @@ app.layout = html.Div([
                 this event.
             """)),
             html.Pre(id='relayout-data', style=styles['pre']),
-        ], className='three columns')
+        ], className='three columns'),
+        html.Div([
+            dcc.RadioItems(['Z', 'Y', 'X'], 'Z', id='radio-items'),
+            html.Button('Reset Grid', id='reset'),
+        html.Div(id='slider-output-container')
+        ], className='three columns'),
     ])
 ])
 
@@ -147,21 +152,22 @@ def display_hover_data(hoverData):
 @app.callback(
     [Output('click-data', 'children'),
      Output('basic-interactions', 'figure')],
-    [Input('basic-interactions', 'clickData')],
+    [Input('basic-interactions', 'clickData'), Input('radio-items', 'value')],
     [State('basic-interactions', 'relayoutData')])
-def display_click_data(clickData, relayoutData):
+
+def display_click_data(clickData, measurementChoice, relayoutData):
     if not clickData:
         return dash.no_update, dash.no_update
     point = clickData["points"][0]
-    print(clickData)
     # Do something only for a specific trace
     if point["curveNumber"] > 0:
         return dash.no_update, dash.no_update
     else: 
-        i = g.get_node_index(point['x'], point['y'], point['z'])
-        print('clicked on', i)
-        g.measure(i)
-        fig = update_rule(g)
+        print(clickData)
+        i = g.get_node_index(point['x'], point['y'], point['z']) # Update the plot based on the node clicked
+        g.handle_measurements(i, measurementChoice)
+        fig = update_plot(g)
+
     # Make sure the view/angle stays the same when updating the figure
     if relayoutData and "scene.camera" in relayoutData:
         fig.update_layout(scene_camera=relayoutData["scene.camera"])
@@ -174,6 +180,22 @@ def display_click_data(clickData, relayoutData):
 def display_relayout_data(relayoutData):
     return json.dumps(relayoutData, indent=2)
 
+@app.callback(
+    Output('slider-output-container', 'children'),
+    Input('radio-items', 'value'))
+def update_output(value):
+    return 'You have selected "{}" basis'.format(value)
 
-
+'''
+@app.callback(
+    Output('basic-interactions', 'figure'),
+    Input('reset', 'n_clicks'),
+    prevent_initial_call=True)
+def reset_grid(input):
+    print(input, 'hi')
+    global g 
+    g = Grid([height, width, length])
+    fig = update_plot(g)
+    return fig
+'''
 app.run_server(debug=True, use_reloader=False)

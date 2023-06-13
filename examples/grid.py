@@ -20,8 +20,6 @@ class Grid(GraphState):
         for e in self.edges:
             self.add_edge(*e)
 
-        
-        
 
     def get_node_index(self, x, y, z):
         return x + y * self.shape[1] + z * self.shape[1] * self.shape[2]
@@ -74,3 +72,8 @@ class Grid(GraphState):
 
     def adjaencyMatrix(self):
         return nx.to_numpy_array(self.to_networkx())
+
+    def handle_measurements(self, i, basis):
+        self.removed_nodes.append(i)
+        self.measure(i, basis=basis)
+        
