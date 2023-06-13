@@ -11,7 +11,7 @@ class Grid(GraphState):
 
         self.edges = [] 
         self.removed_nodes = []
-        self.get_node_coords()
+        self.generate_node_coords()
         self.generate_cube_edges()
 
         for i in range(self.shape[0]*self.shape[1]*self.shape[2]):
@@ -49,7 +49,7 @@ class Grid(GraphState):
                     end_node = self.get_node_index(x, y, z + 1)
                     self.edges.append((start_node, end_node))
 
-    def get_node_coords(self):
+    def generate_node_coords(self):
         """
         Get node coordinates.
         """
@@ -74,6 +74,8 @@ class Grid(GraphState):
         return nx.to_numpy_array(self.to_networkx())
 
     def handle_measurements(self, i, basis):
-        self.removed_nodes.append(i)
         self.measure(i, basis=basis)
         
+        
+        
+
