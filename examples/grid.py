@@ -68,7 +68,7 @@ class Grid(GraphState):
         for i in range(self.shape[0]*self.shape[1]):
             if random.random() < p:
                 self.measure(i)
-                self.removed.append(i)
+                self.removed_nodes.append(i)
 
     def adjaencyMatrix(self):
         return nx.to_numpy_array(self.to_networkx())

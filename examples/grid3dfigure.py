@@ -13,6 +13,7 @@ g = Grid([height, width, length])
 
 def update_plot(g):
     gnx = g.to_networkx()
+
     # plt.figure(figsize=(5,5))
     edges = gnx.edges()
 
@@ -150,10 +151,10 @@ def display_hover_data(hoverData):
 
 
 @app.callback(
-    [Output('click-data', 'children'),
-     Output('basic-interactions', 'figure')],
-    [Input('basic-interactions', 'clickData'), Input('radio-items', 'value')],
-    [State('basic-interactions', 'relayoutData')])
+    Output('click-data', 'children'),
+    Output('basic-interactions', 'figure'),
+    Input('basic-interactions', 'clickData'), Input('radio-items', 'value'),
+    State('basic-interactions', 'relayoutData'))
 
 def display_click_data(clickData, measurementChoice, relayoutData):
     if not clickData:
@@ -163,8 +164,8 @@ def display_click_data(clickData, measurementChoice, relayoutData):
     if point["curveNumber"] > 0:
         return dash.no_update, dash.no_update
     else: 
-        print(clickData)
         i = g.get_node_index(point['x'], point['y'], point['z']) # Update the plot based on the node clicked
+        print('clickedon', i)
         g.handle_measurements(i, measurementChoice)
         fig = update_plot(g)
 
