@@ -5,84 +5,82 @@ import json
 from textwrap import dedent as d
 import numpy as np
 
-height = 5
-width = 5
-length = 5
+height = 4
+width = 4
+length = 4
 
 g = Grid([height, width, length])
-gnx = g.to_networkx()
 
+def update_rule(g):
+    gnx = g.to_networkx()
+    # plt.figure(figsize=(5,5))
+    edges = gnx.edges()
 
-# plt.figure(figsize=(5,5))
-edges = gnx.edges()
+    # we need to seperate the X,Y,Z coordinates for Plotly
+    # NOTE: g.node_coords is a dictionary where the keys are 1,...,6
 
-# ## update to 3d dimension
-# g.node_coords = nx.spring_layout(gnx, dim = 3, k = 0.5) # k regulates the distance between nodes
-# weights = [G[u][v]['weight'] for u,v in edges]
-# nx.draw(G, with_labels=True, node_color='skyblue', font_weight='bold',  width=weights, pos=pos)
+    x_nodes = [g.node_coords[key][0] for key in g.node_coords.keys()] # x-coordinates of nodes
+    y_nodes = [g.node_coords[key][1] for key in g.node_coords.keys()] # y-coordinates
+    z_nodes = [g.node_coords[key][2] for key in g.node_coords.keys()] # z-coordinates
 
-# we need to seperate the X,Y,Z coordinates for Plotly
-# NOTE: g.node_coords is a dictionary where the keys are 1,...,6
+    #we need to create lists that contain the starting and ending coordinates of each edge.
+    x_edges=[]
+    y_edges=[]
+    z_edges=[]
 
-x_nodes = [g.node_coords[key][0] for key in g.node_coords.keys()] # x-coordinates of nodes
-y_nodes = [g.node_coords[key][1] for key in g.node_coords.keys()] # y-coordinates
-z_nodes = [g.node_coords[key][2] for key in g.node_coords.keys()] # z-coordinates
+    #create lists holding midpoints that we will use to anchor text
+    xtp = []
+    ytp = []
+    ztp = []
 
-#we need to create lists that contain the starting and ending coordinates of each edge.
-x_edges=[]
-y_edges=[]
-z_edges=[]
+    #need to fill these with all of the coordinates
+    for edge in edges:
+        #format: [beginning,ending,None]
+        x_coords = [g.node_coords[edge[0]][0],g.node_coords[edge[1]][0],None]
+        x_edges += x_coords
+        xtp.append(0.5*(g.node_coords[edge[0]][0]+ g.node_coords[edge[1]][0]))
 
-#create lists holding midpoints that we will use to anchor text
-xtp = []
-ytp = []
-ztp = []
+        y_coords = [g.node_coords[edge[0]][1],g.node_coords[edge[1]][1],None]
+        y_edges += y_coords
+        ytp.append(0.5*(g.node_coords[edge[0]][1]+ g.node_coords[edge[1]][1]))
 
-#need to fill these with all of the coordinates
-for edge in edges:
-    #format: [beginning,ending,None]
-    x_coords = [g.node_coords[edge[0]][0],g.node_coords[edge[1]][0],None]
-    x_edges += x_coords
-    xtp.append(0.5*(g.node_coords[edge[0]][0]+ g.node_coords[edge[1]][0]))
+        z_coords = [g.node_coords[edge[0]][2],g.node_coords[edge[1]][2],None]
+        z_edges += z_coords
+        ztp.append(0.5*(g.node_coords[edge[0]][2]+ g.node_coords[edge[1]][2])) 
 
-    y_coords = [g.node_coords[edge[0]][1],g.node_coords[edge[1]][1],None]
-    y_edges += y_coords
-    ytp.append(0.5*(g.node_coords[edge[0]][1]+ g.node_coords[edge[1]][1]))
+    #etext = [f'weight={w}' for w in edge_weights]
 
-    z_coords = [g.node_coords[edge[0]][2],g.node_coords[edge[1]][2],None]
-    z_edges += z_coords
-    ztp.append(0.5*(g.node_coords[edge[0]][2]+ g.node_coords[edge[1]][2])) 
+    #create a trace for the edges
+    trace_edges = go.Scatter3d(
+        x=x_edges,
+        y=y_edges,
+        z=z_edges,
+        mode='lines',
+        line=dict(color='black', width=2),
+        hoverinfo='none')
 
-#etext = [f'weight={w}' for w in edge_weights]
+    #create a trace for the nodes
+    trace_nodes = go.Scatter3d(
+        x=x_nodes,
+        y=y_nodes,
+        z=z_nodes,
+        mode='markers',
+        marker=dict(symbol='circle',
+                size=10,
+                color='skyblue'),
+        text=[str(i) for i in range(length*width*height)]
+        )
 
-#create a trace for the edges
-trace_edges = go.Scatter3d(
-    x=x_edges,
-    y=y_edges,
-    z=z_edges,
-    mode='lines',
-    line=dict(color='black', width=2),
-    hoverinfo='none')
-
-#create a trace for the nodes
-trace_nodes = go.Scatter3d(
-    x=x_nodes,
-    y=y_nodes,
-    z=z_nodes,
-    mode='markers',
-    marker=dict(symbol='circle',
-            size=10,
-            color='skyblue'),
-    text=[str(i) for i in range(length*width*height)]
+    #Include the traces we want to plot and create a figure
+    data = [trace_nodes, trace_edges]
+    fig = go.Figure(data=data)
+    fig.layout.height = 800
+    fig.update_layout(
+    margin=dict(l=0, r=0, t=0, b=0)
     )
+    return fig
 
-#Include the traces we want to plot and create a figure
-data = [trace_nodes, trace_edges]
-fig = go.Figure(data=data)
-fig.layout.height = 800
-fig.update_layout(
-   margin=dict(l=0, r=0, t=0, b=0)
-)
+fig = update_rule(g)
 
 import dash
 from dash import dcc, html
@@ -160,11 +158,10 @@ def display_click_data(clickData, relayoutData):
     if point["curveNumber"] > 0:
         return dash.no_update, dash.no_update
     else: 
-        sizes = 8 * np.ones(10)
-        sizes[point["pointNumber"]] = 15
-        colors = ['blue',]*10
-        colors[point["pointNumber"]] = 'red'
-        fig.update_traces(marker_size=sizes, marker_color=colors)
+        i = g.get_node_index(point['x'], point['y'], point['z'])
+        print('clicked on', i)
+        g.measure(i)
+        fig = update_rule(g)
     # Make sure the view/angle stays the same when updating the figure
     if relayoutData and "scene.camera" in relayoutData:
         fig.update_layout(scene_camera=relayoutData["scene.camera"])
