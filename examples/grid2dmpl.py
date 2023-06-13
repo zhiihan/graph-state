@@ -1,18 +1,21 @@
 from graph_state import GraphState
 from collections import Counter
-import numpy as np
 import random
 import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use("Qt5agg")
 
+# Use 30 qubits
+height = 3
+width = 5 #should be same as height for now
+
 class Grid(GraphState):
-    def __init__(self, width, height, length):
+    def __init__(self, width, height, length=1):
         self.height = height
         self.width = width
         self.length = length
-        super().__init__(width*height*length)
+        super().__init__(width*height)
         self.edges = []
         self.removed = []
 
@@ -22,29 +25,12 @@ class Grid(GraphState):
         for j in range(self.height-1):
             for i in range(self.width):
                 self.edges.append((i+j*self.width, i+(j+1)*self.width))
-        
+
         for i in range(self.height*self.width):
             self.h(i)
         
         for e in self.edges:
             self.add_edge(*e)
-
-        self.G = self.to_networkx()
-        self.get_node_coords()
-
-    def get_node_coords(self):
-        """
-        Get node coordinates.
-        """
-        self.node_coords = {}
-
-        for i in range(self.height):
-            for j in range(self.width):
-                for k in range(self.length):
-                    self.node_coords.update({
-                        str(i*self.width*self.length + j*self.length + k) : np.array([i, j, k])
-                    })      
-        
 
     def damage_grid(self, p):
         # p is the probability of losing a qubit
@@ -100,3 +86,7 @@ class Grid(GraphState):
 
     def adjaencyMatrix(self):
         return nx.to_numpy_array(self.to_networkx())
+
+
+g = Grid(width, height)
+g.draw()

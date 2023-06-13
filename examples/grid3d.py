@@ -6,6 +6,7 @@ from dash import dcc, html
 from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
 import numpy as np
+from grid import Grid
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -110,4 +111,4 @@ def display_relayout_data(relayoutData):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True, port=8089)
+    app.run_server(debug=True, port=8089, use_reloader=False)
