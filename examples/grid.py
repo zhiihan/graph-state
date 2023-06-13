@@ -8,29 +8,51 @@ import matplotlib
 matplotlib.use("Qt5agg")
 
 class Grid(GraphState):
-    def __init__(self, width, height, length):
-        self.height = height
-        self.width = width
-        self.length = length
-        super().__init__(width*height*length)
+    def __init__(self, shape):
+        self.shape = shape
+        super().__init__(self.shape[0]*self.shape[1]*self.shape[2])
         self.edges = []
         self.removed = []
+        self.get_node_coords()
+        self.generate_cube_edges()
 
-        for j in range(self.height):
-            for i in range(self.width-1):
-                self.edges.append((i+j*self.width, (i+1)+j*self.width))
-        for j in range(self.height-1):
-            for i in range(self.width):
-                self.edges.append((i+j*self.width, i+(j+1)*self.width))
-        
-        for i in range(self.height*self.width):
+        for i in range(self.shape[0]*self.shape[1]*self.shape[2]):
             self.h(i)
         
         for e in self.edges:
             self.add_edge(*e)
 
         self.G = self.to_networkx()
-        self.get_node_coords()
+        
+
+    def get_node_index(self, x, y, z):
+        return x + y * self.shape[1] + z * self.shape[1] * self.shape[2]
+
+    def generate_cube_edges(self):
+        num_nodes = self.shape[0]*self.shape[1]*self.shape[2]
+        # Generate edges along the height
+        for z in range(self.shape[2]):
+            for y in range(self.shape[1]):
+                for x in range(self.shape[0] - 1):
+                    start_node = self.get_node_index(x, y, z)
+                    end_node = self.get_node_index(x + 1, y, z)
+                    self.edges.append((start_node, end_node))
+
+        # Generate edges along the width
+        for z in range(self.shape[2]):
+            for y in range(self.shape[1] - 1):
+                for x in range(self.shape[0]):
+                    start_node = self.get_node_index(x, y, z)
+                    end_node = self.get_node_index(x, y + 1, z)
+                    self.edges.append((start_node, end_node))
+
+        # Generate edges along the length
+        for z in range(self.shape[2] - 1):
+            for y in range(self.shape[1]):
+                for x in range(self.shape[0]):
+                    start_node = self.get_node_index(x, y, z)
+                    end_node = self.get_node_index(x, y, z + 1)
+                    self.edges.append((start_node, end_node))
 
     def get_node_coords(self):
         """
@@ -38,18 +60,17 @@ class Grid(GraphState):
         """
         self.node_coords = {}
 
-        for i in range(self.height):
-            for j in range(self.width):
-                for k in range(self.length):
+        for z in range(self.shape[2]):
+            for y in range(self.shape[1]):
+                for x in range(self.shape[0]):
                     self.node_coords.update({
-                        str(i*self.width*self.length + j*self.length + k) : np.array([i, j, k])
+                        self.get_node_index(x, y, z) : np.array([x, y, z])
                     })      
-        
 
     def damage_grid(self, p):
         # p is the probability of losing a qubit
 
-        for i in range(self.height*self.width):
+        for i in range(self.shape[0]*self.shape[1]):
             if random.random() < p:
                 self.measure(i)
                 self.removed.append(i)
@@ -59,7 +80,7 @@ class Grid(GraphState):
         fig.canvas.mpl_connect('button_press_event', self.onClick)
         
         self.G = self.to_networkx()
-        self.pos_nodes = {i: ((i%self.width), -(i//self.width)) for i in self.G.nodes()}
+        self.pos_nodes = {i: ((i%self.shape[1]), -(i//self.shape[1])) for i in self.G.nodes()}
 
         for i in self.removed:
             self.G.remove_node(i)
