@@ -70,7 +70,7 @@ def update_plot(g):
         marker=dict(symbol='circle',
                 size=10,
                 color='skyblue'),
-        text=[str(i) for i in range(length*width*height)]
+        text=[i for i in g.node_coords.keys()]
         )
 
     #Include the traces we want to plot and create a figure
