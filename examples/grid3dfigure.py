@@ -191,16 +191,18 @@ def display_relayout_data(relayoutData):
 def update_output(value):
     return 'You have selected "{}" basis'.format(value)
 
-'''
+
 @app.callback(
-    Output('basic-interactions', 'figure'),
+    Output('basic-interactions', 'figure', allow_duplicate=True),
     Input('reset', 'n_clicks'),
     prevent_initial_call=True)
 def reset_grid(input):
     print(input, 'hi')
     global g 
+    global removed_nodes
     g = Grid([height, width, length])
+    removed_nodes = []
     fig = update_plot(g)
     return fig
-'''
+
 app.run_server(debug=True, use_reloader=False)
