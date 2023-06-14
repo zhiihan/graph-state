@@ -171,8 +171,8 @@ def display_click_data(clickData, measurementChoice, relayoutData):
     # Do something only for a specific trace
     if point["curveNumber"] > 0 or 'x' not in point:
         return dash.no_update, dash.no_update
-    i = G.get_node_index(point['x'], point['y'], point['z'])
     else: 
+        i = G.get_node_index(point['x'], point['y'], point['z'])
         # Update the plot based on the node clicked
         if i not in removed_nodes:
             removed_nodes.append(i)
