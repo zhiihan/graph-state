@@ -159,32 +159,30 @@ def display_hover_data(hoverData):
 
 @app.callback(
     Output('click-data', 'children'),
-    Output('remove-nodes', 'n_clicks'),
-    Input('basic-interactions', 'clickData'), Input('radio-items', 'value'))
+    Output('basic-interactions', 'figure'),
+    Input('basic-interactions', 'clickData'), Input('radio-items', 'value'),
+    State('basic-interactions', 'relayoutData'))
 
-def display_click_data(clickData, measurementChoice):
+def display_click_data(clickData, measurementChoice, relayoutData):
     global removed_nodes
     if not clickData:
         return dash.no_update, dash.no_update
     point = clickData["points"][0]
     # Do something only for a specific trace
-    if 'x' not in point:
+    if point["curveNumber"] > 0 or 'x' not in point:
         return dash.no_update, dash.no_update
     i = G.get_node_index(point['x'], point['y'], point['z'])
-    if point["curveNumber"] > 0:
-        return dash.no_update, dash.no_update
     else: 
         # Update the plot based on the node clicked
-        
-
         if i not in removed_nodes:
             removed_nodes.append(i)
             G.handle_measurements(i, measurementChoice)
             print('clickedon', i)
-        #fig = update_plot(G, update=False)
-
-
-    return json.dumps(clickData, indent=2), 1
+            fig = update_plot(G,update=False)
+    # Make sure the view/angle stays the same when updating the figure
+    if relayoutData and "scene.camera" in relayoutData:
+        fig.update_layout(scene_camera=relayoutData["scene.camera"])
+    return json.dumps(clickData, indent=2), fig
 
 
 @app.callback(
@@ -214,17 +212,11 @@ def reset_grid(input):
     return fig
 
 @app.callback(
-    Output('basic-interactions', 'figure'),
+    Output('basic-interactions', 'figure', allow_duplicate=True),
     Input('remove-nodes', 'n_clicks'),
-    State('basic-interactions', 'relayoutData'),
     prevent_initial_call=True)
-def remove_nodes(inputs, relayoutData):
-    print(removed_nodes)
-
-    fig = update_plot(G,update=True)
-    # Make sure the view/angle stays the same when updating the figure
-    if relayoutData and "scene.camera" in relayoutData:
-        fig.update_layout(scene_camera=relayoutData["scene.camera"])
+def reset_grid(input):
+    fig = update_plot(G, update=True)
     return fig
 
 app.run_server(debug=True, use_reloader=False, threaded=True)
