@@ -5,9 +5,9 @@ import json
 from textwrap import dedent as d
 import numpy as np
 
-height = 2
-width = 2
-length = 2
+height = 4
+width = 4
+length = 4
 
 G = Grid([height, width, length])
 removed_nodes = []
@@ -178,7 +178,7 @@ def display_click_data(clickData, measurementChoice, relayoutData):
             removed_nodes.append(i)
             G.handle_measurements(i, measurementChoice)
             print('clickedon', i)
-        fig = update_plot(G,update=False)
+        fig = update_plot(G,update=True)
     # Make sure the view/angle stays the same when updating the figure
     if relayoutData and "scene.camera" in relayoutData:
         fig.update_layout(scene_camera=relayoutData["scene.camera"])
