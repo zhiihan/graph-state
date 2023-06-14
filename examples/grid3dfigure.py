@@ -221,12 +221,10 @@ def reset_grid(input):
 def remove_nodes(inputs, relayoutData):
     print(removed_nodes)
 
-
-
     fig = update_plot(G,update=True)
     # Make sure the view/angle stays the same when updating the figure
     if relayoutData and "scene.camera" in relayoutData:
         fig.update_layout(scene_camera=relayoutData["scene.camera"])
     return fig
 
-app.run_server(debug=True, use_reloader=False)
+app.run_server(debug=True, use_reloader=False, threaded=True)
