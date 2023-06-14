@@ -178,7 +178,7 @@ def display_click_data(clickData, measurementChoice, relayoutData):
             removed_nodes.append(i)
             G.handle_measurements(i, measurementChoice)
             print('clickedon', i)
-            fig = update_plot(G,update=False)
+        fig = update_plot(G,update=False)
     # Make sure the view/angle stays the same when updating the figure
     if relayoutData and "scene.camera" in relayoutData:
         fig.update_layout(scene_camera=relayoutData["scene.camera"])
