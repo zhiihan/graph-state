@@ -5,14 +5,14 @@ import json
 from textwrap import dedent as d
 import numpy as np
 
-height = 4
-width = 4
-length = 4
+height = 2
+width = 2
+length = 2
 
-g = Grid([height, width, length])
+G = Grid([height, width, length])
 removed_nodes = []
 
-def update_plot(g):
+def update_plot(g, update=False):
     gnx = g.to_networkx()
 
     # plt.figure(figsize=(5,5))
@@ -21,9 +21,14 @@ def update_plot(g):
     # we need to seperate the X,Y,Z coordinates for Plotly
     # NOTE: g.node_coords is a dictionary where the keys are 1,...,6
 
-    x_nodes = [g.node_coords[i][0] for i in g.node_coords.keys() if i not in removed_nodes] # x-coordinates of nodes
-    y_nodes = [g.node_coords[i][1] for i in g.node_coords.keys() if i not in removed_nodes] # y-coordinates
-    z_nodes = [g.node_coords[i][2] for i in g.node_coords.keys() if i not in removed_nodes] # z-coordinates
+    if update:
+        x_nodes = [g.node_coords[j][0] for j in g.node_coords.keys() if j not in removed_nodes]
+        y_nodes = [g.node_coords[j][1] for j in g.node_coords.keys() if j not in removed_nodes]
+        z_nodes = [g.node_coords[j][2] for j in g.node_coords.keys() if j not in removed_nodes]
+    else:
+        x_nodes = [g.node_coords[i][0] for i in g.node_coords.keys()] # x-coordinates of nodes
+        y_nodes = [g.node_coords[i][1] for i in g.node_coords.keys()] # y-coordinates
+        z_nodes = [g.node_coords[i][2] for i in g.node_coords.keys()] # z-coordinates
 
     #we need to create lists that contain the starting and ending coordinates of each edge.
     x_edges=[]
@@ -82,7 +87,7 @@ def update_plot(g):
     )
     return fig
 
-fig = update_plot(g)
+fig = update_plot(G)
 
 import dash
 from dash import dcc, html
@@ -137,8 +142,9 @@ app.layout = html.Div([
         ], className='three columns'),
         html.Div([
             dcc.RadioItems(['Z', 'Y', 'X'], 'Z', id='radio-items'),
+            html.Div(id='slider-output-container'),
             html.Button('Reset Grid', id='reset'),
-        html.Div(id='slider-output-container')
+            html.Button('Remove Nodes', id='remove-nodes'),
         ], className='three columns'),
     ])
 ])
@@ -153,30 +159,32 @@ def display_hover_data(hoverData):
 
 @app.callback(
     Output('click-data', 'children'),
-    Output('basic-interactions', 'figure'),
-    Input('basic-interactions', 'clickData'), Input('radio-items', 'value'),
-    State('basic-interactions', 'relayoutData'))
+    Output('remove-nodes', 'n_clicks'),
+    Input('basic-interactions', 'clickData'), Input('radio-items', 'value'))
 
-def display_click_data(clickData, measurementChoice, relayoutData):
+def display_click_data(clickData, measurementChoice):
     global removed_nodes
     if not clickData:
         return dash.no_update, dash.no_update
     point = clickData["points"][0]
     # Do something only for a specific trace
-    i = g.get_node_index(point['x'], point['y'], point['z'])
+    if 'x' not in point:
+        return dash.no_update, dash.no_update
+    i = G.get_node_index(point['x'], point['y'], point['z'])
     if point["curveNumber"] > 0:
         return dash.no_update, dash.no_update
     else: 
         # Update the plot based on the node clicked
-        print('clickedon', i)
-        g.handle_measurements(i, measurementChoice)
-        removed_nodes.append(i)
-        fig = update_plot(g)
+        
 
-    # Make sure the view/angle stays the same when updating the figure
-    if relayoutData and "scene.camera" in relayoutData:
-        fig.update_layout(scene_camera=relayoutData["scene.camera"])
-    return json.dumps(clickData, indent=2), fig
+        if i not in removed_nodes:
+            removed_nodes.append(i)
+            G.handle_measurements(i, measurementChoice)
+            print('clickedon', i)
+        #fig = update_plot(G, update=False)
+
+
+    return json.dumps(clickData, indent=2), 1
 
 
 @app.callback(
@@ -198,11 +206,27 @@ def update_output(value):
     prevent_initial_call=True)
 def reset_grid(input):
     print(input, 'hi')
-    global g 
+    global G
     global removed_nodes
-    g = Grid([height, width, length])
+    G = Grid([height, width, length])
     removed_nodes = []
-    fig = update_plot(g)
+    fig = update_plot(G)
+    return fig
+
+@app.callback(
+    Output('basic-interactions', 'figure'),
+    Input('remove-nodes', 'n_clicks'),
+    State('basic-interactions', 'relayoutData'),
+    prevent_initial_call=True)
+def remove_nodes(inputs, relayoutData):
+    print(removed_nodes)
+
+
+
+    fig = update_plot(G,update=True)
+    # Make sure the view/angle stays the same when updating the figure
+    if relayoutData and "scene.camera" in relayoutData:
+        fig.update_layout(scene_camera=relayoutData["scene.camera"])
     return fig
 
 app.run_server(debug=True, use_reloader=False)
