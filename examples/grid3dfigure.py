@@ -1,11 +1,11 @@
 import plotly.graph_objects as go
-import networkx as nx
 from grid import Grid
 import json
 from textwrap import dedent as d
 import dash
 from dash import dcc, html
 from dash.dependencies import Input, Output, State
+import time
 
 height = 4
 width = 4
@@ -18,15 +18,20 @@ def update_plot(g, update=False):
     gnx = g.to_networkx()
 
     # plt.figure(figsize=(5,5))
+    
+    nodes = gnx.nodes()
     edges = gnx.edges()
+
+    for i in removed_nodes:
+        gnx.remove_node(i)
 
     # we need to seperate the X,Y,Z coordinates for Plotly
     # NOTE: g.node_coords is a dictionary where the keys are 1,...,6
 
     if update:
-        x_nodes = [g.node_coords[j][0] for j in g.node_coords.keys() if j not in removed_nodes]
-        y_nodes = [g.node_coords[j][1] for j in g.node_coords.keys() if j not in removed_nodes]
-        z_nodes = [g.node_coords[j][2] for j in g.node_coords.keys() if j not in removed_nodes]
+        x_nodes = [g.node_coords[j][0] for j in nodes]
+        y_nodes = [g.node_coords[j][1] for j in nodes]
+        z_nodes = [g.node_coords[j][2] for j in nodes]
     else:
         x_nodes = [g.node_coords[i][0] for i in g.node_coords.keys()] # x-coordinates of nodes
         y_nodes = [g.node_coords[i][1] for i in g.node_coords.keys()] # y-coordinates
@@ -77,7 +82,7 @@ def update_plot(g, update=False):
         marker=dict(symbol='circle',
                 size=10,
                 color='skyblue'),
-        text=[i for i in g.node_coords.keys()]
+        text=[j for j in nodes]
         )
 
     #Include the traces we want to plot and create a figure
@@ -89,8 +94,7 @@ def update_plot(g, update=False):
     )
     return fig
 
-fig = update_plot(G)
-
+f = update_plot(G)
 
 styles = {
     'pre': {
@@ -105,8 +109,9 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app.layout = html.Div([
     dcc.Graph(
         id='basic-interactions',
-        figure=fig
+        figure=f
     ),
+    dcc.Store(id='draw-plot'),
 
     html.Div(className='row', children=[
         html.Div([
@@ -157,11 +162,10 @@ def display_hover_data(hoverData):
 
 @app.callback(
     Output('click-data', 'children'),
-    Output('basic-interactions', 'figure'),
-    Input('basic-interactions', 'clickData'), State('radio-items', 'value'),
-    State('basic-interactions', 'relayoutData'))
+    Output('draw-plot','data'),
+    Input('basic-interactions', 'clickData'), Input('radio-items', 'value'))
 
-def display_click_data(clickData, measurementChoice, relayoutData):
+def display_click_data(clickData, measurementChoice):
     global removed_nodes
     if not clickData:
         return dash.no_update, dash.no_update
@@ -176,11 +180,8 @@ def display_click_data(clickData, measurementChoice, relayoutData):
             removed_nodes.append(i)
             G.handle_measurements(i, measurementChoice)
             print('clickedon', i)
-        fig = update_plot(G,update=True)
-    # Make sure the view/angle stays the same when updating the figure
-    if relayoutData and "scene.camera" in relayoutData:
-        fig.update_layout(scene_camera=relayoutData["scene.camera"])
-    return json.dumps(clickData, indent=2), fig
+    time.sleep(0.1)
+    return json.dumps(clickData, indent=2), i
 
 
 @app.callback(
@@ -215,6 +216,18 @@ def reset_grid(input):
     prevent_initial_call=True)
 def remove_nodes(input):
     fig = update_plot(G, update=True)
+    return fig
+
+@app.callback(
+    Output('basic-interactions', 'figure', allow_duplicate=True),
+    Input('draw-plot', 'data'),
+    State('basic-interactions', 'relayoutData'),
+    prevent_initial_call=True)
+def remove_nodes2(data, relayoutData):
+    fig = update_plot(G, update=True)
+    # Make sure the view/angle stays the same when updating the figure
+    if relayoutData and "scene.camera" in relayoutData:
+        fig.update_layout(scene_camera=relayoutData["scene.camera"])
     return fig
 
 app.run_server(debug=True, use_reloader=False, threaded=True)
