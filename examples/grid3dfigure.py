@@ -13,6 +13,7 @@ length = 4
 
 G = Grid([height, width, length])
 removed_nodes = []
+log = []
 
 def update_plot(g, update=False):
     gnx = g.to_networkx()
@@ -163,9 +164,9 @@ def display_hover_data(hoverData):
 @app.callback(
     Output('click-data', 'children'),
     Output('draw-plot','data'),
-    Input('basic-interactions', 'clickData'), Input('radio-items', 'value'))
+    Input('basic-interactions', 'clickData'), Input('radio-items', 'value'), State('click-data', 'children'))
 
-def display_click_data(clickData, measurementChoice):
+def display_click_data(clickData, measurementChoice, clickLog):
     global removed_nodes
     if not clickData:
         return dash.no_update, dash.no_update
@@ -181,7 +182,12 @@ def display_click_data(clickData, measurementChoice):
             G.handle_measurements(i, measurementChoice)
             print('clickedon', i)
     time.sleep(0.1)
-    return json.dumps(clickData, indent=2), i
+
+    log.append(f"Move: {len(log)}, Node: {i}, Coordinates {point['x']},{point['y']},{point['z']}, Measurement: {measurementChoice}")
+    log.append(html.Br())
+
+    return html.P(log), i
+
 
 
 @app.callback(
