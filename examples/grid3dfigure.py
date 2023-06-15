@@ -146,11 +146,23 @@ app.layout = html.Div([
             html.Pre(id='relayout-data', style=styles['pre']),
         ], className='three columns'),
         html.Div([
+            dcc.Markdown(d("""
+                **Select Measurement Basis**
+
+                Click to select the type of measurement.
+            """)),
             dcc.RadioItems(['Z', 'Y', 'X'], 'Z', id='radio-items'),
             html.Div(id='slider-output-container'),
             html.Button('Reset Grid', id='reset'),
-            dcc.Input(id='load-graph-input', type="text", placeholder="Load Graph State"),
-            html.Button('Load Graph', id='load-graph-button'),
+            html.Div(
+                [dcc.Markdown(d("""
+                **Load Graph State**
+
+                Paste data to load a graph state.
+                """)),
+                dcc.Input(id='load-graph-input', type="text", placeholder="Load Graph State"),
+                html.Button('Load Graph', id='load-graph-button'), html.Div(id='loaded')]
+           )
         ], className='three columns'),
     ])
 ])
@@ -213,7 +225,6 @@ def update_output(value):
     Input('reset', 'n_clicks'),
     prevent_initial_call=True)
 def reset_grid(input):
-    print(input, 'hi')
     global G
     global removed_nodes
     global log
@@ -226,6 +237,7 @@ def reset_grid(input):
 @app.callback(
     Output('click-data', 'children', allow_duplicate=True),
     Output('draw-plot', 'data', allow_duplicate=True),
+    Output('loaded', 'children'),
     Input('load-graph-button', 'n_clicks'),
     State('load-graph-input', "value"),
     prevent_initial_call=True)
@@ -248,7 +260,7 @@ def load_graph(n_clicks, input_string):
         G.handle_measurements(i, measurementChoice)
         log.append(f"{i}, {measurementChoice}; ")
         log.append(html.Br())
-    return log, 1
+    return log, 1, 'Graph loaded!'
 
 
 @app.callback(
