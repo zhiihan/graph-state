@@ -14,6 +14,7 @@ length = 4
 G = Grid([height, width, length])
 removed_nodes = []
 log = []
+graph_states = []
 
 def update_plot(g, update=False):
     gnx = g.to_networkx()
@@ -148,7 +149,8 @@ app.layout = html.Div([
             dcc.RadioItems(['Z', 'Y', 'X'], 'Z', id='radio-items'),
             html.Div(id='slider-output-container'),
             html.Button('Reset Grid', id='reset'),
-            html.Button('Remove Nodes', id='remove-nodes'),
+            dcc.Input(id='load-graph-input', type="text", placeholder="Load Graph State"),
+            html.Button('Load Graph', id='load-graph-button'),
         ], className='three columns'),
     ])
 ])
@@ -164,8 +166,7 @@ def display_hover_data(hoverData):
 @app.callback(
     Output('click-data', 'children'),
     Output('draw-plot','data'),
-    Input('basic-interactions', 'clickData'), Input('radio-items', 'value'), State('click-data', 'children'))
-
+    Input('basic-interactions', 'clickData'), State('radio-items', 'value'), State('click-data', 'children'))
 def display_click_data(clickData, measurementChoice, clickLog):
     global removed_nodes
     if not clickData:
@@ -180,10 +181,13 @@ def display_click_data(clickData, measurementChoice, clickLog):
         if i not in removed_nodes:
             removed_nodes.append(i)
             G.handle_measurements(i, measurementChoice)
+            
             print('clickedon', i)
     time.sleep(0.1)
 
-    log.append(f"Move: {len(log)}, Node: {i}, Coordinates {point['x']},{point['y']},{point['z']}, Measurement: {measurementChoice}")
+    
+    #log.append(f"Move: {len(log)}, Node: {i}, Coordinates: {[point['x'], point['y'], point['z']]}, Measurement: {measurementChoice}")
+    log.append(f"{i}, {measurementChoice}; ")
     log.append(html.Br())
 
     return html.P(log), i
@@ -205,24 +209,47 @@ def update_output(value):
 
 @app.callback(
     Output('basic-interactions', 'figure', allow_duplicate=True),
+    Output('click-data', 'children', allow_duplicate=True),
     Input('reset', 'n_clicks'),
     prevent_initial_call=True)
 def reset_grid(input):
     print(input, 'hi')
     global G
     global removed_nodes
+    global log
     G = Grid([height, width, length])
     removed_nodes = []
     fig = update_plot(G)
-    return fig
+    log = []
+    return fig, log
 
 @app.callback(
-    Output('basic-interactions', 'figure', allow_duplicate=True),
-    Input('remove-nodes', 'n_clicks'),
+    Output('click-data', 'children', allow_duplicate=True),
+    Output('draw-plot', 'data', allow_duplicate=True),
+    Input('load-graph-button', 'n_clicks'),
+    State('load-graph-input', "value"),
     prevent_initial_call=True)
-def remove_nodes(input):
-    fig = update_plot(G, update=True)
-    return fig
+def load_graph(n_clicks, input_string):
+    reset_grid(n_clicks)
+
+    input_string = input_string.replace(" ", "")
+    input_string = input_string[:-1]
+
+    # Split the string into outer lists
+    outer_list = input_string.split(";")
+
+    # Split each inner string into individual elements
+    result = [inner.split(",") for inner in outer_list]
+    for inner in result:
+        inner[0] = int(inner[0])
+
+    for i, measurementChoice in result:
+        removed_nodes.append(i)
+        G.handle_measurements(i, measurementChoice)
+        log.append(f"{i}, {measurementChoice}; ")
+        log.append(html.Br())
+    return log, 1
+
 
 @app.callback(
     Output('basic-interactions', 'figure', allow_duplicate=True),
