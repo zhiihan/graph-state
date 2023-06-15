@@ -7,12 +7,13 @@ from dash import dcc, html
 from dash.dependencies import Input, Output, State
 import time
 
-height = 4
-width = 4
-length = 4
+height = 5
+width = 5
+length = 5
 
 G = Grid([height, width, length])
-removed_nodes = []
+G.damage_grid(0.24, seed=1)
+removed_nodes = G.removed_nodes
 log = []
 graph_states = []
 
@@ -90,7 +91,7 @@ def update_plot(g, update=False):
     #Include the traces we want to plot and create a figure
     data = [trace_nodes, trace_edges]
     fig = go.Figure(data=data)
-    fig.layout.height = 800
+    fig.layout.height = 600
     fig.update_layout(
     margin=dict(l=0, r=0, t=0, b=0)
     )
@@ -244,6 +245,16 @@ def reset_grid(input):
 def load_graph(n_clicks, input_string):
     reset_grid(n_clicks)
 
+    result = process_string(input_string)
+
+    for i, measurementChoice in result:
+        removed_nodes.append(i)
+        G.handle_measurements(i, measurementChoice)
+        log.append(f"{i}, {measurementChoice}; ")
+        log.append(html.Br())
+    return log, 1, 'Graph loaded!'
+
+def process_string(input_string):
     input_string = input_string.replace(" ", "")
     input_string = input_string[:-1]
 
@@ -254,14 +265,7 @@ def load_graph(n_clicks, input_string):
     result = [inner.split(",") for inner in outer_list]
     for inner in result:
         inner[0] = int(inner[0])
-
-    for i, measurementChoice in result:
-        removed_nodes.append(i)
-        G.handle_measurements(i, measurementChoice)
-        log.append(f"{i}, {measurementChoice}; ")
-        log.append(html.Br())
-    return log, 1, 'Graph loaded!'
-
+    return result
 
 @app.callback(
     Output('basic-interactions', 'figure', allow_duplicate=True),
@@ -274,5 +278,7 @@ def remove_nodes2(data, relayoutData):
     if relayoutData and "scene.camera" in relayoutData:
         fig.update_layout(scene_camera=relayoutData["scene.camera"])
     return fig
+
+
 
 app.run_server(debug=True, use_reloader=False, threaded=True)
