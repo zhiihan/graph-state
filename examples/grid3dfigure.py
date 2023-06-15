@@ -3,7 +3,9 @@ import networkx as nx
 from grid import Grid
 import json
 from textwrap import dedent as d
-import numpy as np
+import dash
+from dash import dcc, html
+from dash.dependencies import Input, Output, State
 
 height = 4
 width = 4
@@ -89,10 +91,6 @@ def update_plot(g, update=False):
 
 fig = update_plot(G)
 
-import dash
-from dash import dcc, html
-from dash.dependencies import Input, Output, State
-
 
 styles = {
     'pre': {
@@ -160,7 +158,7 @@ def display_hover_data(hoverData):
 @app.callback(
     Output('click-data', 'children'),
     Output('basic-interactions', 'figure'),
-    Input('basic-interactions', 'clickData'), Input('radio-items', 'value'),
+    Input('basic-interactions', 'clickData'), State('radio-items', 'value'),
     State('basic-interactions', 'relayoutData'))
 
 def display_click_data(clickData, measurementChoice, relayoutData):
@@ -215,7 +213,7 @@ def reset_grid(input):
     Output('basic-interactions', 'figure', allow_duplicate=True),
     Input('remove-nodes', 'n_clicks'),
     prevent_initial_call=True)
-def reset_grid(input):
+def remove_nodes(input):
     fig = update_plot(G, update=True)
     return fig
 
