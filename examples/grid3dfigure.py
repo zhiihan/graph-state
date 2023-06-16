@@ -7,12 +7,13 @@ from dash import dcc, html
 from dash.dependencies import Input, Output, State
 import time
 
-height = 5
-width = 5
-length = 5
+height = 4
+width = 4
+length = 4
+p = 0.24
 
 G = Grid([height, width, length])
-G.damage_grid(0.24, seed=1)
+G.damage_grid(p, seed=1)
 removed_nodes = G.removed_nodes
 log = []
 graph_states = []
@@ -97,7 +98,7 @@ def update_plot(g, update=False):
     )
     return fig
 
-f = update_plot(G)
+f = update_plot(G, update=True)
 
 styles = {
     'pre': {
