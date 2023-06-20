@@ -15,12 +15,33 @@ p = 0.24
 seed = 1
 
 G = Grid([height, width, length])
-G.damage_grid(p, seed=seed)
 removed_nodes = G.removed_nodes
 log = []
 graph_states = []
+camera_state = {
+  "scene.camera": {
+    "up": {
+      "x": 0,
+      "y": 0,
+      "z": 1
+    },
+    "center": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "eye": {
+      "x": 1.8999654712209553,
+      "y": 1.8999654712209548,
+      "z": 1.8999654712209553
+    },
+    "projection": {
+      "type": "perspective"
+    }
+  }
+}
 
-def update_plot(g, update=False):
+def update_plot(g):
     gnx = g.to_networkx()
 
     # plt.figure(figsize=(5,5))
@@ -34,14 +55,9 @@ def update_plot(g, update=False):
     # we need to seperate the X,Y,Z coordinates for Plotly
     # NOTE: g.node_coords is a dictionary where the keys are 1,...,6
 
-    if update:
-        x_nodes = [g.node_coords[j][0] for j in nodes]
-        y_nodes = [g.node_coords[j][1] for j in nodes]
-        z_nodes = [g.node_coords[j][2] for j in nodes]
-    else:
-        x_nodes = [g.node_coords[i][0] for i in g.node_coords.keys()] # x-coordinates of nodes
-        y_nodes = [g.node_coords[i][1] for i in g.node_coords.keys()] # y-coordinates
-        z_nodes = [g.node_coords[i][2] for i in g.node_coords.keys()] # z-coordinates
+    x_nodes = [g.node_coords[j][0] for j in nodes] # x-coordinates of nodes
+    y_nodes = [g.node_coords[j][1] for j in nodes] # y-coordinates
+    z_nodes = [g.node_coords[j][2] for j in nodes] # z-coordinates
 
     #we need to create lists that contain the starting and ending coordinates of each edge.
     x_edges=[]
@@ -96,11 +112,11 @@ def update_plot(g, update=False):
     fig = go.Figure(data=data)
     fig.layout.height = 600
     fig.update_layout(
-    margin=dict(l=0, r=0, t=0, b=0)
+    margin=dict(l=0, r=0, t=0, b=0), scene_camera=camera_state["scene.camera"]
     )
     return fig
 
-f = update_plot(G, update=True)
+f = update_plot(G)
 
 styles = {
     'pre': {
@@ -203,8 +219,6 @@ def display_click_data(clickData, measurementChoice, clickLog):
             
             print('clickedon', i)
     time.sleep(0.1)
-
-    
     #log.append(f"Move: {len(log)}, Node: {i}, Coordinates: {[point['x'], point['y'], point['z']]}, Measurement: {measurementChoice}")
     log.append(f"{i}, {measurementChoice}; ")
     log.append(html.Br())
@@ -215,9 +229,16 @@ def display_click_data(clickData, measurementChoice, clickLog):
 
 @app.callback(
     Output('relayout-data', 'children'),
-    [Input('basic-interactions', 'relayoutData')])
-def display_relayout_data(relayoutData):
-    return json.dumps(relayoutData, indent=2)
+    [Input('basic-interactions', 'relayoutData')],
+    State('relayout-data', 'children'))
+def display_relayout_data(relayoutData, state):
+    global camera_state
+    if relayoutData and "scene.camera" in relayoutData:
+        camera_state = relayoutData
+        return json.dumps(relayoutData, indent=2)
+    else:
+        return state
+
 
 @app.callback(
     Output('slider-output-container', 'children'),
@@ -237,8 +258,9 @@ def reset_grid(input):
     global log
     G = Grid([height, width, length])
     removed_nodes = []
-    fig = update_plot(G, update=True)
+    fig = update_plot(G)
     log = []
+    # Make sure the view/angle stays the same when updating the figure        
     return fig, log
 
 @app.callback(
@@ -309,12 +331,11 @@ def draw_plot(data, relayoutData):
     """
     Called when ever the plot needs to be drawn.
     """
-    fig = update_plot(G, update=True)
+    fig = update_plot(G)
     # Make sure the view/angle stays the same when updating the figure
-    if relayoutData and "scene.camera" in relayoutData:
-        fig.update_layout(scene_camera=relayoutData["scene.camera"])
+    # fig.update_layout(scene_camera=camera_state["scene.camera"])
     return fig
 
 
 
-app.run_server(debug=True, use_reloader=False, threaded=True)
+app.run_server(debug=True, use_reloader=False)
