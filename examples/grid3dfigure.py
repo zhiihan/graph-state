@@ -7,11 +7,12 @@ from dash import dcc, html
 from dash.dependencies import Input, Output, State
 import time
 import random
+import numpy as np
 
 height = 4
 width = 4
 length = 4
-p = 0.24
+p = 0.10
 seed = 1
 
 G = Grid([height, width, length])
@@ -152,7 +153,7 @@ app.layout = html.Div([
 
                 Click on points in the graph.
             """)),
-            html.Button('Undo', id='undo'),
+            html.Button('Undo', id='undo'), html.Button('Run Algorithm 1', id='alg1'),
             html.Pre(id='click-data', style=styles['pre'])], className='three columns'),
 
         html.Div([
@@ -364,6 +365,48 @@ def undo_move(n_clicks):
         return log, 1, f'Undo {undo}'
     else:
         pass
+
+@app.callback(
+    Output('click-data', 'children', allow_duplicate=True),
+    Output('draw-plot', 'data', allow_duplicate=True),
+    Output('loaded', 'children', allow_duplicate=True),
+    Input('alg1', 'n_clicks'),
+    prevent_initial_call=True)
+def algorithm1(nclicks):
+    holes = removed_nodes
+    
+
+
+    hole_locations = np.zeros(4)
+
+    #counting where the holes are
+    for h in holes:
+        nx, ny, nz = G.node_coords[h]
+        for yoffset in range(2):
+            for xoffset in range(2):
+                if ((nx + xoffset) % 2 == nz % 2) and ((ny + yoffset) % 2 == nz % 2):
+                    hole_locations[xoffset+yoffset*2] += 1
+    print(hole_locations)
+    
+    xoffset = np.argmax(hole_locations) // 2
+    yoffset = np.argmax(hole_locations) % 2
+
+    print(xoffset, yoffset)
+
+
+    for z in range(G.shape[2]):
+        for y in range(G.shape[1]):
+            for x in range(G.shape[0]):
+                if ((x + xoffset) % 2 == z % 2) and ((y + yoffset) % 2 == z % 2):
+                    i = G.get_node_index(x, y, z)
+                    if i not in removed_nodes:
+                        G.handle_measurements(i, 'Z')
+                        log.append(f"{i}, Z; ")
+                        log.append(html.Br())
+                        removed_nodes.append(i)
+    
+    return log, 1, 'Ran Algorithm 1'
+
 
 
 app.run_server(debug=True, use_reloader=False)
