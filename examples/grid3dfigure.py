@@ -6,14 +6,16 @@ import dash
 from dash import dcc, html
 from dash.dependencies import Input, Output, State
 import time
+import random
 
 height = 4
 width = 4
 length = 4
 p = 0.24
+seed = 1
 
 G = Grid([height, width, length])
-G.damage_grid(p, seed=1)
+G.damage_grid(p, seed=seed)
 removed_nodes = G.removed_nodes
 log = []
 graph_states = []
@@ -155,7 +157,10 @@ app.layout = html.Div([
             """)),
             dcc.RadioItems(['Z', 'Y', 'X'], 'Z', id='radio-items'),
             html.Div(id='slider-output-container'),
-            html.Button('Reset Grid', id='reset'),
+            html.Button('Reset Grid', id='reset'), 
+
+            html.Div([html.Button('Reset Seed', id='reset-seed'),
+            dcc.Input(id='load-graph-seed', type="text", placeholder="Seed"),]),
             html.Div(
                 [dcc.Markdown(d("""
                 **Load Graph State**
@@ -232,9 +237,36 @@ def reset_grid(input):
     global log
     G = Grid([height, width, length])
     removed_nodes = []
-    fig = update_plot(G)
+    fig = update_plot(G, update=True)
     log = []
     return fig, log
+
+@app.callback(
+    Output('click-data', 'children', allow_duplicate=True),
+    Output('draw-plot', 'data', allow_duplicate=True),
+    Input('reset-seed', 'n_clicks'),
+    State('load-graph-seed', "value"),
+    prevent_initial_call=True)
+def reset_seed(input, seed):
+    """
+    Randomly measure qubits.
+    """
+    fig, log = reset_grid(input)
+
+    if seed is not None:
+        random.seed(int(seed))
+    # p is the probability of losing a qubit
+
+    measurementChoice = 'Z'
+
+    for i in range(height*length*width):
+        if random.random() < p:
+            removed_nodes.append(i)
+            G.handle_measurements(i, measurementChoice)
+            log.append(f"{i}, {measurementChoice}; ")
+            log.append(html.Br())
+    print(f'Loaded seed : {seed}')
+    return log, 1
 
 @app.callback(
     Output('click-data', 'children', allow_duplicate=True),
@@ -273,7 +305,10 @@ def process_string(input_string):
     Input('draw-plot', 'data'),
     State('basic-interactions', 'relayoutData'),
     prevent_initial_call=True)
-def remove_nodes2(data, relayoutData):
+def draw_plot(data, relayoutData):
+    """
+    Called when ever the plot needs to be drawn.
+    """
     fig = update_plot(G, update=True)
     # Make sure the view/angle stays the same when updating the figure
     if relayoutData and "scene.camera" in relayoutData:
