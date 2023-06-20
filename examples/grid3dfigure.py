@@ -17,6 +17,7 @@ seed = 1
 G = Grid([height, width, length])
 removed_nodes = G.removed_nodes
 log = []
+move_list = []
 graph_states = []
 camera_state = {
   "scene.camera": {
@@ -151,8 +152,8 @@ app.layout = html.Div([
 
                 Click on points in the graph.
             """)),
-            html.Pre(id='click-data', style=styles['pre']),
-        ], className='three columns'),
+            html.Button('Undo', id='undo'),
+            html.Pre(id='click-data', style=styles['pre'])], className='three columns'),
 
         html.Div([
             dcc.Markdown(d("""
@@ -204,6 +205,7 @@ def display_hover_data(hoverData):
     Input('basic-interactions', 'clickData'), State('radio-items', 'value'), State('click-data', 'children'))
 def display_click_data(clickData, measurementChoice, clickLog):
     global removed_nodes
+    global move_list
     if not clickData:
         return dash.no_update, dash.no_update
     point = clickData["points"][0]
@@ -216,12 +218,13 @@ def display_click_data(clickData, measurementChoice, clickLog):
         if i not in removed_nodes:
             removed_nodes.append(i)
             G.handle_measurements(i, measurementChoice)
-            
+            move_list.append([i, measurementChoice])
             print('clickedon', i)
     time.sleep(0.1)
     #log.append(f"Move: {len(log)}, Node: {i}, Coordinates: {[point['x'], point['y'], point['z']]}, Measurement: {measurementChoice}")
     log.append(f"{i}, {measurementChoice}; ")
     log.append(html.Br())
+    
 
     return html.P(log), i
 
@@ -252,14 +255,17 @@ def update_output(value):
     Output('click-data', 'children', allow_duplicate=True),
     Input('reset', 'n_clicks'),
     prevent_initial_call=True)
-def reset_grid(input):
+def reset_grid(input, move_list_reset = True):
     global G
     global removed_nodes
     global log
+    global move_list
     G = Grid([height, width, length])
     removed_nodes = []
     fig = update_plot(G)
     log = []
+    if move_list_reset:
+        move_list = []
     # Make sure the view/angle stays the same when updating the figure        
     return fig, log
 
@@ -287,6 +293,7 @@ def reset_seed(input, seed):
             G.handle_measurements(i, measurementChoice)
             log.append(f"{i}, {measurementChoice}; ")
             log.append(html.Br())
+            move_list.append([i, measurementChoice])
     print(f'Loaded seed : {seed}')
     return log, 1
 
@@ -307,6 +314,7 @@ def load_graph(n_clicks, input_string):
         G.handle_measurements(i, measurementChoice)
         log.append(f"{i}, {measurementChoice}; ")
         log.append(html.Br())
+        move_list.append([i, measurementChoice])
     return log, 1, 'Graph loaded!'
 
 def process_string(input_string):
@@ -336,6 +344,26 @@ def draw_plot(data, relayoutData):
     # fig.update_layout(scene_camera=camera_state["scene.camera"])
     return fig
 
+@app.callback(
+    Output('click-data', 'children', allow_duplicate=True),
+    Output('draw-plot', 'data', allow_duplicate=True),
+    Output('loaded', 'children', allow_duplicate=True),
+    Input('undo', 'n_clicks'),
+    prevent_initial_call=True)
+def undo_move(n_clicks):
+    if move_list:
+        reset_grid(n_clicks, move_list_reset=False)
+        
+        undo = move_list.pop(-1)
+        for move in move_list:
+            i, measurementChoice = move
+            removed_nodes.append(i)
+            G.handle_measurements(i, measurementChoice)
+            log.append(f"{i}, {measurementChoice}; ")
+            log.append(html.Br())
+        return log, 1, f'Undo {undo}'
+    else:
+        pass
 
 
 app.run_server(debug=True, use_reloader=False)
