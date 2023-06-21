@@ -1,5 +1,6 @@
 import plotly.graph_objects as go
 from grid import Grid
+from defect import Defect 
 import json
 from textwrap import dedent as d
 import dash
@@ -15,11 +16,11 @@ length = 4
 p = 0.10
 seed = 1
 
-G = Grid([height, width, length])
+G = Grid([height, width, length]) # qubits
+D = Defect([height, width, length]) # holes
 removed_nodes = G.removed_nodes
-log = []
-move_list = []
-graph_states = []
+log = [] #html version of move_list
+move_list = [] #local variable containing moves
 camera_state = {
   "scene.camera": {
     "up": {
@@ -44,6 +45,9 @@ camera_state = {
 }
 
 def update_plot(g):
+    """
+    Main function that updates the plot.
+    """
     gnx = g.to_networkx()
 
     # plt.figure(figsize=(5,5))
@@ -60,6 +64,10 @@ def update_plot(g):
     x_nodes = [g.node_coords[j][0] for j in nodes] # x-coordinates of nodes
     y_nodes = [g.node_coords[j][1] for j in nodes] # y-coordinates
     z_nodes = [g.node_coords[j][2] for j in nodes] # z-coordinates
+
+    x_removed_nodes = [g.node_coords[j][0] for j in removed_nodes]
+    y_removed_nodes = [g.node_coords[j][1] for j in removed_nodes]
+    z_removed_nodes = [g.node_coords[j][2] for j in removed_nodes]   
 
     #we need to create lists that contain the starting and ending coordinates of each edge.
     x_edges=[]
@@ -109,13 +117,41 @@ def update_plot(g):
         text=[j for j in nodes]
         )
 
+    trace_removed_nodes = go.Scatter3d(
+        x=x_removed_nodes,
+        y=y_removed_nodes,
+        z=z_removed_nodes,
+        mode='markers',
+        marker=dict(symbol='circle',
+                size=10,
+                color='red'),
+        visible='legendonly',
+        text=[j for j in removed_nodes]
+    )
+
+    trace_removed_nodes = go.Scatter3d(
+        x=x_removed_nodes,
+        y=y_removed_nodes,
+        z=z_removed_nodes,
+        mode='markers',
+        marker=dict(symbol='circle',
+                size=10,
+                color='red'),
+        visible='legendonly',
+        text=[j for j in removed_nodes]
+    )
+
     #Include the traces we want to plot and create a figure
-    data = [trace_nodes, trace_edges]
+    data = [trace_nodes, trace_edges, trace_removed_nodes]
     fig = go.Figure(data=data)
     fig.layout.height = 600
     fig.update_layout(
-    margin=dict(l=0, r=0, t=0, b=0), scene_camera=camera_state["scene.camera"]
-    )
+    margin=dict(l=0, r=0, t=0, b=0), scene_camera=camera_state["scene.camera"], legend=dict(
+    yanchor="top",
+    y=0.99,
+    xanchor="left",
+    x=0.01
+    ))
     return fig
 
 f = update_plot(G)
@@ -295,6 +331,7 @@ def reset_seed(input, seed):
             log.append(f"{i}, {measurementChoice}; ")
             log.append(html.Br())
             move_list.append([i, measurementChoice])
+            D.add_node(i)
     print(f'Loaded seed : {seed}')
     return log, 1
 
@@ -374,8 +411,6 @@ def undo_move(n_clicks):
     prevent_initial_call=True)
 def algorithm1(nclicks):
     holes = removed_nodes
-    
-
 
     hole_locations = np.zeros(4)
 
