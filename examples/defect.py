@@ -42,7 +42,7 @@ class Defect:
     def to_networkx(self):
         self.graph.add_nodes_from([(i, xyz) for (i, xyz) in self.node_coords.items()])
 
-    def return_plot(self):
+    def return_plot_data(self):
         x_nodes = [self.node_coords[j][0] for j in self.graph.nodes] # x-coordinates of nodes
         y_nodes = [self.node_coords[j][1] for j in self.graph.nodes] # y-coordinates
         z_nodes = [self.node_coords[j][2] for j in self.graph.nodes] # z-coordinates

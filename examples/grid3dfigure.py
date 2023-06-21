@@ -9,10 +9,12 @@ from dash.dependencies import Input, Output, State
 import time
 import random
 import numpy as np
+from helperfunctions import *
 
 height = 4
 width = 4
 length = 4
+shape = [height, length, width]
 p = 0.10
 seed = 1
 
@@ -50,71 +52,34 @@ def update_plot(g):
     """
     gnx = g.to_networkx()
 
-    # plt.figure(figsize=(5,5))
-    
-    nodes = gnx.nodes()
-    edges = gnx.edges()
-
     for i in removed_nodes:
         gnx.remove_node(i)
 
-    # we need to seperate the X,Y,Z coordinates for Plotly
-    # NOTE: g.node_coords is a dictionary where the keys are 1,...,6
-
-    x_nodes = [g.node_coords[j][0] for j in nodes] # x-coordinates of nodes
-    y_nodes = [g.node_coords[j][1] for j in nodes] # y-coordinates
-    z_nodes = [g.node_coords[j][2] for j in nodes] # z-coordinates
-
+    g_nodes, g_edges = nx_to_plot(gnx, shape)
     x_removed_nodes = [g.node_coords[j][0] for j in removed_nodes]
     y_removed_nodes = [g.node_coords[j][1] for j in removed_nodes]
     z_removed_nodes = [g.node_coords[j][2] for j in removed_nodes]   
-
-    #we need to create lists that contain the starting and ending coordinates of each edge.
-    x_edges=[]
-    y_edges=[]
-    z_edges=[]
-
-    #create lists holding midpoints that we will use to anchor text
-    xtp = []
-    ytp = []
-    ztp = []
-
-    #need to fill these with all of the coordinates
-    for edge in edges:
-        #format: [beginning,ending,None]
-        x_coords = [g.node_coords[edge[0]][0],g.node_coords[edge[1]][0],None]
-        x_edges += x_coords
-        xtp.append(0.5*(g.node_coords[edge[0]][0]+ g.node_coords[edge[1]][0]))
-
-        y_coords = [g.node_coords[edge[0]][1],g.node_coords[edge[1]][1],None]
-        y_edges += y_coords
-        ytp.append(0.5*(g.node_coords[edge[0]][1]+ g.node_coords[edge[1]][1]))
-
-        z_coords = [g.node_coords[edge[0]][2],g.node_coords[edge[1]][2],None]
-        z_edges += z_coords
-        ztp.append(0.5*(g.node_coords[edge[0]][2]+ g.node_coords[edge[1]][2])) 
 
     #etext = [f'weight={w}' for w in edge_weights]
 
     #create a trace for the edges
     trace_edges = go.Scatter3d(
-        x=x_edges,
-        y=y_edges,
-        z=z_edges,
+        x=g_edges[0],
+        y=g_edges[1],
+        z=g_edges[2],
         mode='lines',
         line=dict(color='black', width=2),
         hoverinfo='none')
 
     #create a trace for the nodes
     trace_nodes = go.Scatter3d(
-        x=x_nodes,
-        y=y_nodes,
-        z=z_nodes,
+        x=g_nodes[0],
+        y=g_nodes[1],
+        z=g_nodes[2],
         mode='markers',
         marker=dict(symbol='circle',
                 size=10,
                 color='skyblue'),
-        text=[j for j in nodes]
         )
 
     trace_removed_nodes = go.Scatter3d(
