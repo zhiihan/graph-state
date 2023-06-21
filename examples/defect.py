@@ -1,5 +1,6 @@
 import networkx as nx
 import numpy as np
+from helperfunctions import *
 
 class Defect:
     def __init__(self, shape):
@@ -18,15 +19,14 @@ class Defect:
 
     def add_node(self, i):
         self.node_coords.update({
-            i : self.get_node_coords(i)
+            i : get_node_coords(i, self.shape)
         })
         self.graph.add_node(i)
         self.add_edges()
 
     def are_nodes_connected(self, node1, node2):
-
-        x1 = self.node_coords[node1]
-        x2 = self.node_coords[node2]
+        x1 = np.array(self.node_coords[node1])
+        x2 = np.array(self.node_coords[node2])
 
         if np.sum(np.abs(x1 - x2)) == 1:
             return True
@@ -40,7 +40,8 @@ class Defect:
                     self.graph.add_edge(n, n2)
 
     def to_networkx(self):
-        self.graph.add_nodes_from([(i, xyz) for (i, xyz) in self.node_coords.items()])
+        self.add_edges()
+        return self.graph
 
     def return_plot_data(self):
         x_nodes = [self.node_coords[j][0] for j in self.graph.nodes] # x-coordinates of nodes

@@ -1,4 +1,3 @@
-import numpy as np
 
 def get_node_index(x, y, z, shape):
     return x + y * shape[1] + z * shape[1] * shape[2]
@@ -7,7 +6,7 @@ def get_node_coords(i, shape):
     index_x = i % shape[0]
     index_y = (i // shape[0]) % shape[1]
     index_z = (i // (shape[0] * shape[1])) % shape[2]
-    return np.array([index_x, index_y, index_z])
+    return [index_x, index_y, index_z]
 
 def nx_to_plot(graph, shape):
     nodes = graph.nodes

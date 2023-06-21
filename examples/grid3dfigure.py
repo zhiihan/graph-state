@@ -51,11 +51,13 @@ def update_plot(g):
     Main function that updates the plot.
     """
     gnx = g.to_networkx()
+    hnx = D.to_networkx()
 
     for i in removed_nodes:
         gnx.remove_node(i)
 
     g_nodes, g_edges = nx_to_plot(gnx, shape)
+    h_nodes, h_edges = nx_to_plot(hnx, shape)
     x_removed_nodes = [g.node_coords[j][0] for j in removed_nodes]
     y_removed_nodes = [g.node_coords[j][1] for j in removed_nodes]
     z_removed_nodes = [g.node_coords[j][2] for j in removed_nodes]   
@@ -94,20 +96,29 @@ def update_plot(g):
         text=[j for j in removed_nodes]
     )
 
-    trace_removed_nodes = go.Scatter3d(
-        x=x_removed_nodes,
-        y=y_removed_nodes,
-        z=z_removed_nodes,
+    trace_holes = go.Scatter3d(
+        x=h_nodes[0],
+        y=h_nodes[1],
+        z=h_nodes[2],
         mode='markers',
         marker=dict(symbol='circle',
                 size=10,
-                color='red'),
-        visible='legendonly',
-        text=[j for j in removed_nodes]
+                color='green'),
+        visible='legendonly'
+    )
+
+    trace_holes_edges = go.Scatter3d(
+        x=h_edges[0],
+        y=h_edges[1],
+        z=h_edges[2],
+        mode='lines',
+        line=dict(color='forestgreen', width=2),
+        hoverinfo='none',
+        visible='legendonly'
     )
 
     #Include the traces we want to plot and create a figure
-    data = [trace_nodes, trace_edges, trace_removed_nodes]
+    data = [trace_nodes, trace_edges, trace_removed_nodes, trace_holes, trace_holes_edges]
     fig = go.Figure(data=data)
     fig.layout.height = 600
     fig.update_layout(
@@ -259,10 +270,12 @@ def update_output(value):
     prevent_initial_call=True)
 def reset_grid(input, move_list_reset = True):
     global G
+    global D
     global removed_nodes
     global log
     global move_list
     G = Grid([height, width, length])
+    D = Defect([height, width, length])
     removed_nodes = []
     fig = update_plot(G)
     log = []
