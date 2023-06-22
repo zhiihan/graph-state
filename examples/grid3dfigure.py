@@ -1,6 +1,6 @@
 import plotly.graph_objects as go
 from grid import Grid
-from defect import Defect 
+from holes import Holes 
 import json
 from textwrap import dedent as d
 import dash
@@ -11,15 +11,15 @@ import random
 import numpy as np
 from helperfunctions import *
 
-height = 4
-width = 4
-length = 4
+height = 5
+width = 5
+length = 5
 shape = [height, length, width]
 p = 0.10
 seed = 1
 
 G = Grid([height, width, length]) # qubits
-D = Defect([height, width, length]) # holes
+D = Holes([height, width, length]) # holes
 removed_nodes = G.removed_nodes
 log = [] #html version of move_list
 move_list = [] #local variable containing moves
@@ -275,7 +275,7 @@ def reset_grid(input, move_list_reset = True):
     global log
     global move_list
     G = Grid([height, width, length])
-    D = Defect([height, width, length])
+    D = Holes([height, width, length])
     removed_nodes = []
     fig = update_plot(G)
     log = []
@@ -388,9 +388,12 @@ def undo_move(n_clicks):
     Input('alg1', 'n_clicks'),
     prevent_initial_call=True)
 def algorithm1(nclicks):
-    holes = removed_nodes
 
+    holes = D.graph.nodes
     hole_locations = np.zeros(4)
+
+    #search for double holes
+    D.double_hole()
 
     #counting where the holes are
     for h in holes:
@@ -404,9 +407,6 @@ def algorithm1(nclicks):
     xoffset = np.argmax(hole_locations) // 2
     yoffset = np.argmax(hole_locations) % 2
 
-    print(xoffset, yoffset)
-
-
     for z in range(G.shape[2]):
         for y in range(G.shape[1]):
             for x in range(G.shape[0]):
@@ -417,7 +417,16 @@ def algorithm1(nclicks):
                         log.append(f"{i}, Z; ")
                         log.append(html.Br())
                         removed_nodes.append(i)
+
     
+    plan = D.double_hole_remove_nodes()
+    print(plan)
+    for i in plan:
+        if i not in removed_nodes:
+            G.handle_measurements(i, 'Z')
+            log.append(f"{i}, Z; ")
+            log.append(html.Br())
+            removed_nodes.append(i)
     return log, 1, 'Ran Algorithm 1'
 
 

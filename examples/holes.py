@@ -2,7 +2,7 @@ import networkx as nx
 import numpy as np
 from helperfunctions import *
 
-class Defect:
+class Holes:
     def __init__(self, shape):
         self.shape = shape
         self.node_coords = {}
@@ -67,7 +67,44 @@ class Defect:
         
         return [x_nodes, y_nodes, z_nodes], [x_edges, y_edges, z_edges]
 
-D = Defect([3, 3, 3])
+    def double_hole(self):
+        """
+        Check if a hole is a double hole.
+
+        Input: holes object
+        Output: 
+        """
+
+        self.double_holes = nx.Graph()
+
+        for h in self.node_coords.values():
+            for i in self.node_coords.values():
+                x_diff = np.abs(np.array(i) - np.array(h))
+                if np.sum(x_diff) == 2:
+                    if not ((x_diff[0] == 2) or (x_diff[1] == 2) or (x_diff[2] == 2)):
+                        self.double_holes.add_node(tuple(h))
+                        self.double_holes.add_node(tuple(i))
+                        self.double_holes.add_edge(tuple(h), tuple(i))
+        print('doubleholes at ', self.double_holes.edges)
+                
+    def double_hole_remove_nodes(self):
+        """
+        Remove nodes from double holes.
+        """
+        plan_to_measure = []
+        for edge in self.double_holes.edges:
+            diff = np.array(edge[1]) - np.array(edge[0])
+            if diff[0] != 0:
+                plan_to_measure.append(np.array(edge[0]) + np.array([diff[0], 0, 0]))
+            if diff[1] != 0:
+                plan_to_measure.append(np.array(edge[0]) + np.array([0, diff[1], 0]))
+            if diff[2] != 0:
+                plan_to_measure.append(np.array(edge[0]) + np.array([0, 0, diff[2]]))
+
+        plan_to_measure_index = [get_node_index(*i, shape=self.shape) for i in plan_to_measure]
+        return plan_to_measure_index
+
+        
 #D.add_node(0, 0, 0)
 #D.add_node(0, 0, 1)
 #D.add_node(0, 0, 2)
