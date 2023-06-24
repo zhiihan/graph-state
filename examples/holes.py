@@ -22,7 +22,7 @@ class Holes:
             i : get_node_coords(i, self.shape)
         })
         self.graph.add_node(i)
-        self.add_edges()
+        
 
     def are_nodes_connected(self, node1, node2):
         x1 = np.array(self.node_coords[node1])
@@ -38,6 +38,7 @@ class Holes:
             for n2 in self.graph.nodes:
                 if self.are_nodes_connected(n, n2):
                     self.graph.add_edge(n, n2)
+        self.double_hole()
 
     def to_networkx(self):
         self.add_edges()
@@ -75,36 +76,104 @@ class Holes:
         Output: 
         """
 
-        self.double_holes = nx.Graph()
+        #self.double_holes = nx.Graph()
 
-        for h in self.node_coords.values():
-            for i in self.node_coords.values():
-                x_diff = np.abs(np.array(i) - np.array(h))
+        for i in self.node_coords.keys():
+            for j in self.node_coords.keys():
+                x_diff = np.abs(np.array(self.node_coords[i]) - np.array(self.node_coords[j]))
                 if np.sum(x_diff) == 2:
                     if not ((x_diff[0] == 2) or (x_diff[1] == 2) or (x_diff[2] == 2)):
-                        self.double_holes.add_node(tuple(h))
-                        self.double_holes.add_node(tuple(i))
-                        self.double_holes.add_edge(tuple(h), tuple(i))
-        print('doubleholes at ', self.double_holes.edges)
+                        #self.double_holes.add_node(tuple(h))
+                        #self.double_holes.add_node(tuple(i))
+                        #self.double_holes.add_edge(tuple(h), tuple(i))
+                        self.graph.add_edge(i, j)
+        #print('doubleholes at ', self.double_holes.edges)
                 
     def double_hole_remove_nodes(self):
         """
         Remove nodes from double holes.
         """
-        plan_to_measure = []
-        for edge in self.double_holes.edges:
-            diff = np.array(edge[1]) - np.array(edge[0])
-            if diff[0] != 0:
-                plan_to_measure.append(np.array(edge[0]) + np.array([diff[0], 0, 0]))
-            if diff[1] != 0:
-                plan_to_measure.append(np.array(edge[0]) + np.array([0, diff[1], 0]))
-            if diff[2] != 0:
-                plan_to_measure.append(np.array(edge[0]) + np.array([0, 0, diff[2]]))
 
-        plan_to_measure_index = [get_node_index(*i, shape=self.shape) for i in plan_to_measure]
-        return plan_to_measure_index
+        subgraphs = [self.graph.subgraph(c).copy() for c in nx.connected_components(self.graph)]
+        measurements_list = []
+        for s in subgraphs:
+            measurements = []
+            for edge in s.edges:
+                start_vec = np.array(get_node_coords(edge[0], self.shape))
+                end_vec = np.array(get_node_coords(edge[1], self.shape))
 
-        
+                diff = end_vec - start_vec
+                if diff[0] != 0:
+                    measurements.append(start_vec + np.array([diff[0], 0, 0]))
+                if diff[1] != 0:
+                    measurements.append(start_vec + np.array([0, diff[1], 0]))
+                if diff[2] != 0:
+                    measurements.append(start_vec + np.array([0, 0, diff[2]]))
+            measurements_list.append([get_node_index(*i, shape=self.shape) for i in measurements])
+
+        return measurements_list
+
+    def carve_out_box(self):
+        """
+        Carve out a box from all the double holes. 
+        """
+
+        self.minmax_vectors = []
+        subgraphs = [self.graph.subgraph(c).copy() for c in nx.connected_components(self.graph)]
+        measurements_list = []
+        for s in subgraphs:
+            
+            min_vector = np.array([np.inf, np.inf, np.inf])
+            max_vector = np.array([0, 0, 0], dtype=int)
+            for n in s.nodes:
+                vec = get_node_coords(n, self.shape)
+                min_vector = np.minimum(vec, min_vector).astype(int)
+                max_vector = np.maximum(vec, max_vector).astype(int)
+            self.minmax_vectors.append([min_vector, max_vector])
+            print('box of', min_vector, max_vector)
+            
+            measurements = []
+            for i in range(min_vector[0], max_vector[0] + 1):
+                for j in range(min_vector[1], max_vector[1] + 1):
+                    for k in range(min_vector[2], max_vector[2] + 1):
+                        measurements.append(get_node_index(i, j, k, self.shape))
+            measurements_list.append(measurements)
+        return measurements_list
+    
+    def findlattice(self, xoffset = 0, yoffset = 0):
+        """
+        Find a raussendorf lattice.
+        """
+        measurements_list = []
+
+        for min_vector, max_vector in self.minmax_vectors:
+            box = []
+            measurements = []
+
+            xstart = max(min_vector[0] - 2, 0) 
+            xstop = min(max_vector[0] + 3, self.shape[0])
+            ystart = max(min_vector[1] - 2, 0) 
+            ystop = min(max_vector[1] + 3, self.shape[1])
+            zstart = max(min_vector[2] - 2 , 0) 
+            zstop = min(max_vector[2] + 3 , self.shape[2])
+
+            for i in range(xstart, xstop):
+                for j in range(ystart, ystop):
+                    for k in range(zstart, zstop):
+                        box.append(get_node_index(i, j, k, shape=self.shape))
+            
+            for i in range(self.shape[0]):
+                for j in range(self.shape[1]):
+                    for k in range(self.shape[2]):
+                        index = get_node_index(i, j, k, shape=self.shape)
+                        if index not in box:
+                            measurements.append(index)
+            measurements_list.append(measurements)
+        return measurements_list
+                        
+
+
+    
 #D.add_node(0, 0, 0)
 #D.add_node(0, 0, 1)
 #D.add_node(0, 0, 2)

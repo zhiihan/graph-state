@@ -11,12 +11,15 @@ import random
 import numpy as np
 from helperfunctions import *
 
-height = 5
-width = 5
-length = 5
+# Global constants
+height = 15
+width = 15
+length = 15
 shape = [height, length, width]
 p = 0.10
-seed = 1
+global_seed = 1
+xoffset = 0
+yoffset = 0
 
 G = Grid([height, width, length]) # qubits
 D = Holes([height, width, length]) # holes
@@ -103,8 +106,7 @@ def update_plot(g):
         mode='markers',
         marker=dict(symbol='circle',
                 size=10,
-                color='green'),
-        visible='legendonly'
+                color='green')
     )
 
     trace_holes_edges = go.Scatter3d(
@@ -113,8 +115,7 @@ def update_plot(g):
         z=h_edges[2],
         mode='lines',
         line=dict(color='forestgreen', width=2),
-        hoverinfo='none',
-        visible='legendonly'
+        hoverinfo='none'
     )
 
     #Include the traces we want to plot and create a figure
@@ -165,7 +166,7 @@ app.layout = html.Div([
 
                 Click on points in the graph.
             """)),
-            html.Button('Undo', id='undo'), html.Button('Run Algorithm 1', id='alg1'),
+            html.Button('Undo', id='undo'), html.Button('Run Algorithm 1', id='alg1'), html.Button('Find Lattice', id='findlattice'),
             html.Pre(id='click-data', style=styles['pre'])], className='three columns'),
 
         html.Div([
@@ -234,11 +235,9 @@ def display_click_data(clickData, measurementChoice, clickLog):
             move_list.append([i, measurementChoice])
             print('clickedon', i)
     time.sleep(0.1)
-    #log.append(f"Move: {len(log)}, Node: {i}, Coordinates: {[point['x'], point['y'], point['z']]}, Measurement: {measurementChoice}")
     log.append(f"{i}, {measurementChoice}; ")
     log.append(html.Br())
     
-
     return html.P(log), i
 
 
@@ -270,12 +269,10 @@ def update_output(value):
     prevent_initial_call=True)
 def reset_grid(input, move_list_reset = True):
     global G
-    global D
     global removed_nodes
     global log
     global move_list
-    G = Grid([height, width, length])
-    D = Holes([height, width, length])
+    G = Grid(shape)
     removed_nodes = []
     fig = update_plot(G)
     log = []
@@ -290,19 +287,24 @@ def reset_grid(input, move_list_reset = True):
     Input('reset-seed', 'n_clicks'),
     State('load-graph-seed', "value"),
     prevent_initial_call=True)
-def reset_seed(input, seed):
+def reset_seed(nclicks, seed):
     """
     Randomly measure qubits.
     """
-    fig, log = reset_grid(input)
-
+    fig, log = reset_grid(nclicks)
+    global D
+    D = Holes(shape)
     if seed is not None:
         random.seed(int(seed))
+    else:
+        random.seed(int(global_seed))
     # p is the probability of losing a qubit
 
     measurementChoice = 'Z'
-
+    
     for i in range(height*length*width):
+        if i % 200 == 0:
+            print(i // 200)
         if random.random() < p:
             removed_nodes.append(i)
             G.handle_measurements(i, measurementChoice)
@@ -310,6 +312,7 @@ def reset_seed(input, seed):
             log.append(html.Br())
             move_list.append([i, measurementChoice])
             D.add_node(i)
+    D.add_edges()
     print(f'Loaded seed : {seed}')
     return log, 1
 
@@ -320,7 +323,7 @@ def reset_seed(input, seed):
     Input('load-graph-button', 'n_clicks'),
     State('load-graph-input', "value"),
     prevent_initial_call=True)
-def load_graph(n_clicks, input_string):
+def load_graph_from_string(n_clicks, input_string):
     reset_grid(n_clicks)
 
     result = process_string(input_string)
@@ -388,24 +391,22 @@ def undo_move(n_clicks):
     Input('alg1', 'n_clicks'),
     prevent_initial_call=True)
 def algorithm1(nclicks):
-
+    global xoffset, yoffset
     holes = D.graph.nodes
     hole_locations = np.zeros(4)
 
-    #search for double holes
-    D.double_hole()
-
     #counting where the holes are
     for h in holes:
-        nx, ny, nz = G.node_coords[h]
+        nx, ny, nz = get_node_coords(h, shape)
         for yoffset in range(2):
             for xoffset in range(2):
                 if ((nx + xoffset) % 2 == nz % 2) and ((ny + yoffset) % 2 == nz % 2):
                     hole_locations[xoffset+yoffset*2] += 1
-    print(hole_locations)
     
     xoffset = np.argmax(hole_locations) // 2
     yoffset = np.argmax(hole_locations) % 2
+
+    print(xoffset, yoffset)
 
     for z in range(G.shape[2]):
         for y in range(G.shape[1]):
@@ -417,18 +418,59 @@ def algorithm1(nclicks):
                         log.append(f"{i}, Z; ")
                         log.append(html.Br())
                         removed_nodes.append(i)
+                        move_list.append([i, 'Z']) 
 
-    
-    plan = D.double_hole_remove_nodes()
-    print(plan)
-    for i in plan:
-        if i not in removed_nodes:
-            G.handle_measurements(i, 'Z')
+
+    return log, 1, 'Ran Algorithm 1'
+
+@app.callback(
+    Output('click-data', 'children', allow_duplicate=True),
+    Output('draw-plot', 'data', allow_duplicate=True),
+    Output('loaded', 'children', allow_duplicate=True),
+    Input('findlattice', 'n_clicks'),
+    prevent_initial_call=True)
+def findlattice(nclicks):
+    defect_box = D.carve_out_box()
+    measurements_list = D.findlattice(xoffset=xoffset, yoffset=yoffset)
+    double_holes = D.double_hole_remove_nodes()
+
+    assert len(defect_box) == len(measurements_list)
+
+    if measurements_list:
+        reset_grid(nclicks, move_list_reset=False)
+        # Measure the previous grid before we did find lattice
+        for i, measurementChoice in move_list:
+            G.handle_measurements(i, measurementChoice)
             log.append(f"{i}, Z; ")
             log.append(html.Br())
             removed_nodes.append(i)
+
+        # Carve out the inner box
+        
+        for i in defect_box[nclicks % len(measurements_list)]:
+            if i not in removed_nodes:
+                G.handle_measurements(i, 'Z')
+                log.append(f"{i}, Z; ")
+                log.append(html.Br())
+                removed_nodes.append(i)
+
+        # Carve out the outer box
+        for i in measurements_list[nclicks % len(measurements_list)]:
+            if i not in removed_nodes:
+                G.handle_measurements(i, 'Z')
+                log.append(f"{i}, Z; ")
+                log.append(html.Br())
+                removed_nodes.append(i)
+
+        for i in double_holes[nclicks % len(measurements_list)]:
+            if i not in removed_nodes:
+                G.handle_measurements(i, 'Z')
+                log.append(f"{i}, Z; ")
+                log.append(html.Br())
+                removed_nodes.append(i)
+
+    
+
     return log, 1, 'Ran Algorithm 1'
-
-
 
 app.run_server(debug=True, use_reloader=False)
