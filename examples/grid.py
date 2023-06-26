@@ -20,7 +20,6 @@ class Grid(GraphState):
         for e in self.edges:
             self.add_edge(*e)
 
-
     def get_node_index(self, x, y, z):
         return x + y * self.shape[1] + z * self.shape[1] * self.shape[2]
 
@@ -62,11 +61,12 @@ class Grid(GraphState):
                         self.get_node_index(x, y, z) : np.array([x, y, z])
                     })      
 
-    def damage_grid(self, p):
+    def damage_grid(self, p, seed=None):
+        np.random.seed(seed=seed)
         # p is the probability of losing a qubit
 
-        for i in range(self.shape[0]*self.shape[1]):
-            if random.random() < p:
+        for i in range(self.shape[0]*self.shape[1]*self.shape[2]):
+            if np.random.random() < p:
                 self.measure(i)
                 self.removed_nodes.append(i)
 
@@ -74,8 +74,6 @@ class Grid(GraphState):
         return nx.to_numpy_array(self.to_networkx())
 
     def handle_measurements(self, i, basis):
-        self.measure(i, basis=basis)
-        
-        
+        self.measure(i, basis=basis)        
         
 

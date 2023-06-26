@@ -7,7 +7,7 @@ import matplotlib
 matplotlib.use("Qt5agg")
 
 # Use 30 qubits
-height = 3
+height = 5
 width = 5 #should be same as height for now
 
 class Grid(GraphState):
