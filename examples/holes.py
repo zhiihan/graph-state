@@ -120,6 +120,8 @@ class Holes:
 
         self.minmax_vectors = []
         subgraphs = [self.graph.subgraph(c).copy() for c in nx.connected_components(self.graph)]
+        
+        subgraphs.sort(key=lambda x: len(nx.nodes(x)))
         measurements_list = []
         for s in subgraphs:
             
@@ -130,7 +132,7 @@ class Holes:
                 min_vector = np.minimum(vec, min_vector).astype(int)
                 max_vector = np.maximum(vec, max_vector).astype(int)
             self.minmax_vectors.append([min_vector, max_vector])
-            print('box of', min_vector, max_vector)
+            #print('box of', min_vector, max_vector)
             
             measurements = []
             for i in range(min_vector[0], max_vector[0] + 1):
@@ -144,33 +146,57 @@ class Holes:
         """
         Find a raussendorf lattice.
         """
+        
+        self.cube = [np.array([0, -1, -1]),
+                np.array([-1, 0, -1]),
+                np.array([0, 0, -1]),
+                np.array([0, 1, -1]),
+                np.array([1, 0, -1]),
+                np.array([-1, -1, 0]),
+                np.array([0, -1, 0]),
+                np.array([-1, 0, 0]),
+                np.array([-1, 1, 0]),
+                np.array([0, 1, 0]),
+                np.array([1, 1, 0]),
+                np.array([1, 0, 0]),
+                np.array([1, -1, 0]),
+                np.array([0, -1, 1]),
+                np.array([-1, 0, 1]),
+                np.array([0, 0, 1]),
+                np.array([1, 0, 1]),
+                np.array([0, 1, 1])]
         measurements_list = []
 
-        for min_vector, max_vector in self.minmax_vectors:
-            box = []
-            measurements = []
+        centers = [np.array([x, y, z]) for z in range(self.shape[2]) for y in range(self.shape[1]) for x in range(self.shape[0])
+                if ((x + xoffset) % 2 == z % 2) and ((y + yoffset) % 2 == z % 2)]
 
-            xstart = max(min_vector[0] - 2, 0) 
-            xstop = min(max_vector[0] + 3, self.shape[0])
-            ystart = max(min_vector[1] - 2, 0) 
-            ystop = min(max_vector[1] + 3, self.shape[1])
-            zstart = max(min_vector[2] - 2 , 0) 
-            zstop = min(max_vector[2] + 3 , self.shape[2])
+        print(centers)
+        for c in centers:
+            for cube_node in self.cube:
+                arr = c + cube_node 
+                index = get_node_index(*arr, shape=self.shape)
+                #filter out nodes that are measured
+                if index in self.node_coords.keys():
+                    break
+                #filter out boundary cases
+                if (np.any(arr <= 0)) or (np.any(arr >= self.shape[0])):
+                    break
+            else:
+                measurements_list.append(self.find_cube_measurements(c))
 
-            for i in range(xstart, xstop):
-                for j in range(ystart, ystop):
-                    for k in range(zstart, zstop):
-                        box.append(get_node_index(i, j, k, shape=self.shape))
-            
-            for i in range(self.shape[0]):
-                for j in range(self.shape[1]):
-                    for k in range(self.shape[2]):
-                        index = get_node_index(i, j, k, shape=self.shape)
-                        if index not in box:
-                            measurements.append(index)
-            measurements_list.append(measurements)
         return measurements_list
                         
+    def find_cube_measurements(self, c):
+        
+        cube = []
+        
+        for cube_node in self.cube:
+            vec = c + cube_node
+            cube.append(get_node_index(*vec, shape=self.shape))
+        
+        measurements = [get_node_index(x, y, z, shape=self.shape) for x in range(self.shape[0]) for y in range(self.shape[1]) for z in range(self.shape[2]) if get_node_index(x, y, z, self.shape) not in cube]
+        return measurements 
+
 
 
     

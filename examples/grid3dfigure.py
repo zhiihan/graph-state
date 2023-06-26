@@ -12,9 +12,9 @@ import numpy as np
 from helperfunctions import *
 
 # Global constants
-height = 15
-width = 15
-length = 15
+height = 8
+width = 8
+length = 8
 shape = [height, length, width]
 p = 0.10
 global_seed = 1
@@ -277,6 +277,8 @@ def reset_grid(input, move_list_reset = True):
     fig = update_plot(G)
     log = []
     if move_list_reset:
+        global D
+        D = Holes(shape)
         move_list = []
     # Make sure the view/angle stays the same when updating the figure        
     return fig, log
@@ -301,10 +303,9 @@ def reset_seed(nclicks, seed):
     # p is the probability of losing a qubit
 
     measurementChoice = 'Z'
+    #D.add_node(13)
     
     for i in range(height*length*width):
-        if i % 200 == 0:
-            print(i // 200)
         if random.random() < p:
             removed_nodes.append(i)
             G.handle_measurements(i, measurementChoice)
@@ -391,9 +392,9 @@ def undo_move(n_clicks):
     Input('alg1', 'n_clicks'),
     prevent_initial_call=True)
 def algorithm1(nclicks):
-    global xoffset, yoffset
     holes = D.graph.nodes
     hole_locations = np.zeros(4)
+    global xoffset, yoffset
 
     #counting where the holes are
     for h in holes:
@@ -430,11 +431,11 @@ def algorithm1(nclicks):
     Input('findlattice', 'n_clicks'),
     prevent_initial_call=True)
 def findlattice(nclicks):
-    defect_box = D.carve_out_box()
+    #defect_box = D.carve_out_box()
     measurements_list = D.findlattice(xoffset=xoffset, yoffset=yoffset)
-    double_holes = D.double_hole_remove_nodes()
+    #double_holes = D.double_hole_remove_nodes()
 
-    assert len(defect_box) == len(measurements_list)
+    #assert len(defect_box) == len(measurements_list)
 
     if measurements_list:
         reset_grid(nclicks, move_list_reset=False)
@@ -446,14 +447,14 @@ def findlattice(nclicks):
             removed_nodes.append(i)
 
         # Carve out the inner box
-        
+        """
         for i in defect_box[nclicks % len(measurements_list)]:
             if i not in removed_nodes:
                 G.handle_measurements(i, 'Z')
                 log.append(f"{i}, Z; ")
                 log.append(html.Br())
                 removed_nodes.append(i)
-
+        """
         # Carve out the outer box
         for i in measurements_list[nclicks % len(measurements_list)]:
             if i not in removed_nodes:
@@ -462,13 +463,14 @@ def findlattice(nclicks):
                 log.append(html.Br())
                 removed_nodes.append(i)
 
+        """
         for i in double_holes[nclicks % len(measurements_list)]:
             if i not in removed_nodes:
                 G.handle_measurements(i, 'Z')
                 log.append(f"{i}, Z; ")
                 log.append(html.Br())
                 removed_nodes.append(i)
-
+        """
     
 
     return log, 1, 'Ran Algorithm 1'
