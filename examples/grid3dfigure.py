@@ -12,12 +12,12 @@ import numpy as np
 from helperfunctions import *
 
 # Global constants
-height = 8
-width = 8
-length = 8
+height = 15
+width = 15
+length = 15
 shape = [height, length, width]
-p = 0.10
-global_seed = 1
+p = 0.0
+global_seed = None
 xoffset = 0
 yoffset = 0
 
@@ -298,7 +298,7 @@ def reset_seed(nclicks, seed):
     D = Holes(shape)
     if seed is not None:
         random.seed(int(seed))
-    else:
+    elif global_seed is not None:
         random.seed(int(global_seed))
     # p is the probability of losing a qubit
 
@@ -432,10 +432,13 @@ def algorithm1(nclicks):
     prevent_initial_call=True)
 def findlattice(nclicks):
     #defect_box = D.carve_out_box()
-    measurements_list = D.findlattice(xoffset=xoffset, yoffset=yoffset)
+    global measurements_list
+    if nclicks == 1:
+        measurements_list = D.findlattice(xoffset=xoffset, yoffset=yoffset)
     #double_holes = D.double_hole_remove_nodes()
 
     #assert len(defect_box) == len(measurements_list)
+    print(f'{len(measurements_list)} Raussendorf Latticies found for p = {p}, shape = {shape}')
 
     if measurements_list:
         reset_grid(nclicks, move_list_reset=False)

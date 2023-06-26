@@ -170,7 +170,6 @@ class Holes:
         centers = [np.array([x, y, z]) for z in range(self.shape[2]) for y in range(self.shape[1]) for x in range(self.shape[0])
                 if ((x + xoffset) % 2 == z % 2) and ((y + yoffset) % 2 == z % 2)]
 
-        print(centers)
         for c in centers:
             for cube_node in self.cube:
                 arr = c + cube_node 
@@ -183,11 +182,11 @@ class Holes:
                     break
             else:
                 measurements_list.append(self.find_cube_measurements(c))
-
+        
         return measurements_list
                         
     def find_cube_measurements(self, c):
-        
+
         cube = []
         
         for cube_node in self.cube:
