@@ -1,4 +1,3 @@
-
 def get_node_index(x, y, z, shape):
     return x + y * shape[1] + z * shape[1] * shape[2]
 

@@ -22,7 +22,6 @@ class Holes:
             i : get_node_coords(i, self.shape)
         })
         self.graph.add_node(i)
-        
 
     def are_nodes_connected(self, node1, node2):
         x1 = np.array(self.node_coords[node1])
@@ -142,7 +141,7 @@ class Holes:
             measurements_list.append(measurements)
         return measurements_list
     
-    def findlattice(self, xoffset = 0, yoffset = 0):
+    def findlattice(self, removed_nodes, xoffset = 0, yoffset = 0):
         """
         Find a raussendorf lattice.
         """
@@ -165,41 +164,37 @@ class Holes:
                 np.array([0, 0, 1]),
                 np.array([1, 0, 1]),
                 np.array([0, 1, 1])]
-        measurements_list = []
-
+        
+        scale = 1
+        cubes = []
         centers = [np.array([x, y, z]) for z in range(self.shape[2]) for y in range(self.shape[1]) for x in range(self.shape[0])
                 if ((x + xoffset) % 2 == z % 2) and ((y + yoffset) % 2 == z % 2)]
 
-        for c in centers:
-            for cube_node in self.cube:
-                arr = c + cube_node 
-                index = get_node_index(*arr, shape=self.shape)
-                #filter out nodes that are measured
-                if index in self.node_coords.keys():
-                    break
-                #filter out boundary cases
-                if (np.any(arr <= 0)) or (np.any(arr >= self.shape[0])):
-                    break
-            else:
-                measurements_list.append(self.find_cube_measurements(c))
-        
-        return measurements_list
+        while scale < self.shape[0]:
+            for c in centers:
+                for cube_node in self.cube:
+                    arr = c + cube_node*scale
+                    index = get_node_index(*arr, shape=self.shape)
+                    #filter out nodes that are measured
+                    if (index in removed_nodes):
+                        break
+                    #filter out boundary cases
+                    if (np.any(arr <= 0)) or (np.any(arr >= self.shape[0])):
+                        break
+                else:
+                    cube = np.empty((18, 3))
+                    for i, cube_node in enumerate(self.cube):
+                        cube[i, :] = c + cube_node*scale
                         
-    def find_cube_measurements(self, c):
+                    cubes.append(cube)
+                    print(f"scale = {scale}, center = {c}")
+            scale += 1
 
-        cube = []
-        
-        for cube_node in self.cube:
-            vec = c + cube_node
-            cube.append(get_node_index(*vec, shape=self.shape))
-        
-        measurements = [get_node_index(x, y, z, shape=self.shape) for x in range(self.shape[0]) for y in range(self.shape[1]) for z in range(self.shape[2]) if get_node_index(x, y, z, self.shape) not in cube]
-        return measurements 
+        if len(cubes) > 1:
+            cube_array = np.concatenate(cubes)
+            return cube_array
+        else:
+            return cubes[0]
 
+                        
 
-
-    
-#D.add_node(0, 0, 0)
-#D.add_node(0, 0, 1)
-#D.add_node(0, 0, 2)
-#print(D.graph, D.graph.nodes, D.graph.edges)

@@ -1,7 +1,6 @@
 from graph_state import GraphState
 from collections import Counter
 import numpy as np
-import random
 import networkx as nx
 
 class Grid(GraphState):
