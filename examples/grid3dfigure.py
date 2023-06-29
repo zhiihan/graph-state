@@ -22,7 +22,8 @@ xoffset = 0
 yoffset = 0
 
 G = Grid([height, width, length]) # qubits
-D = Holes([height, width, length]) # holes\
+D = Holes([height, width, length]) # holes
+cube_array = None
 lattice = None
 removed_nodes = G.removed_nodes
 log = [] #html version of move_list
@@ -396,7 +397,7 @@ def algorithm1(nclicks):
     xoffset = np.argmax(hole_locations) // 2
     yoffset = np.argmax(hole_locations) % 2
 
-    print(xoffset, yoffset)
+    print(f"xoffset, yoffset = {(xoffset, yoffset)}")
 
     for z in range(G.shape[2]):
         for y in range(G.shape[1]):
@@ -409,6 +410,11 @@ def algorithm1(nclicks):
                         log.append(html.Br())
                         removed_nodes.append(i)
                         move_list.append([i, 'Z']) 
+    
+    global cube_array
+    cube_array = D.findlattice(removed_nodes, xoffset=xoffset, yoffset=yoffset)
+    print(f'{cube_array.shape[0]//18} Raussendorf Latticies found for p = {p}, shape = {shape}')
+
     return log, 1, 'Ran Algorithm 1'
 
 @app.callback(
@@ -418,12 +424,10 @@ def algorithm1(nclicks):
     Input('findlattice', 'n_clicks'),
     prevent_initial_call=True)
 def findlattice(nclicks):
-    #defect_box = D.carve_out_box()
     global cube_array, lattice
-    #please update this, when the user changes the grid we should recompute the data
-    if nclicks == 1:
+    if cube_array is None:
+        #or we could raiseException here, what should we do?
         cube_array = D.findlattice(removed_nodes, xoffset=xoffset, yoffset=yoffset)
-
     #assert len(defect_box) == len(measurements_list)
     print(f'{cube_array.shape[0]//18} Raussendorf Latticies found for p = {p}, shape = {shape}')
 

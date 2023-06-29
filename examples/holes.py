@@ -87,59 +87,6 @@ class Holes:
                         #self.double_holes.add_edge(tuple(h), tuple(i))
                         self.graph.add_edge(i, j)
         #print('doubleholes at ', self.double_holes.edges)
-                
-    def double_hole_remove_nodes(self):
-        """
-        Remove nodes from double holes.
-        """
-
-        subgraphs = [self.graph.subgraph(c).copy() for c in nx.connected_components(self.graph)]
-        measurements_list = []
-        for s in subgraphs:
-            measurements = []
-            for edge in s.edges:
-                start_vec = np.array(get_node_coords(edge[0], self.shape))
-                end_vec = np.array(get_node_coords(edge[1], self.shape))
-
-                diff = end_vec - start_vec
-                if diff[0] != 0:
-                    measurements.append(start_vec + np.array([diff[0], 0, 0]))
-                if diff[1] != 0:
-                    measurements.append(start_vec + np.array([0, diff[1], 0]))
-                if diff[2] != 0:
-                    measurements.append(start_vec + np.array([0, 0, diff[2]]))
-            measurements_list.append([get_node_index(*i, shape=self.shape) for i in measurements])
-
-        return measurements_list
-
-    def carve_out_box(self):
-        """
-        Carve out a box from all the double holes. 
-        """
-
-        self.minmax_vectors = []
-        subgraphs = [self.graph.subgraph(c).copy() for c in nx.connected_components(self.graph)]
-        
-        subgraphs.sort(key=lambda x: len(nx.nodes(x)))
-        measurements_list = []
-        for s in subgraphs:
-            
-            min_vector = np.array([np.inf, np.inf, np.inf])
-            max_vector = np.array([0, 0, 0], dtype=int)
-            for n in s.nodes:
-                vec = get_node_coords(n, self.shape)
-                min_vector = np.minimum(vec, min_vector).astype(int)
-                max_vector = np.maximum(vec, max_vector).astype(int)
-            self.minmax_vectors.append([min_vector, max_vector])
-            #print('box of', min_vector, max_vector)
-            
-            measurements = []
-            for i in range(min_vector[0], max_vector[0] + 1):
-                for j in range(min_vector[1], max_vector[1] + 1):
-                    for k in range(min_vector[2], max_vector[2] + 1):
-                        measurements.append(get_node_index(i, j, k, self.shape))
-            measurements_list.append(measurements)
-        return measurements_list
     
     def findlattice(self, removed_nodes, xoffset = 0, yoffset = 0):
         """
