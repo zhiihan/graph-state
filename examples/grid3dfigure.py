@@ -12,12 +12,12 @@ import numpy as np
 from helperfunctions import *
 
 # Global constants
-height = 15
-width = 15
-length = 15
+height = 10
+width = 10
+length = 10
 shape = [height, length, width]
-p = 0.0
-global_seed = None
+p = 0.10
+global_seed = 1
 xoffset = 0
 yoffset = 0
 

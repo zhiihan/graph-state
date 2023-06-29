@@ -6,8 +6,6 @@ from helperfunctions import *
 
 # Global constants
 
-
-global_seed = 1
 xoffset = 0
 yoffset = 0
 shape = [15, 15, 15]
@@ -33,7 +31,7 @@ def reset_seed(nclicks, seed, shape=shape):
     global D
     D = Holes(shape)
 
-    random.seed(int(global_seed))
+    random.seed(int(seed))
     # p is the probability of losing a qubit
 
     measurementChoice = 'Z'
@@ -46,7 +44,7 @@ def reset_seed(nclicks, seed, shape=shape):
             move_list.append([i, measurementChoice])
             D.add_node(i)
     D.add_edges()
-    print(f'Loaded seed : {global_seed}')
+    print(f'Loaded seed : {seed}')
 
 def algorithm1(nclicks, shape=shape):
     holes = D.graph.nodes
@@ -105,23 +103,25 @@ def findlattice(nclicks, shape=shape):
     return 
 import matplotlib.pyplot as plt
 
-for i in range(15, 30):
-    s = [i, i, i]
-    latticies = np.empty(30)
-    p_vec = np.linspace(0, 0.25, 30)
+
+s = [15, 15, 15]
+latticies = np.empty((50, 10))
+p_vec = np.linspace(0, 0.25, 50)
+for i, seed in enumerate(range(10)):
     for index, p in enumerate(p_vec):
         print(p)
         reset_grid(1, shape=s)
-        reset_seed(1, global_seed, shape=s)
+        reset_seed(1, seed, shape=s)
         algorithm1(1, shape=s)
         findlattice(1, shape=s)
-        latticies[index] = len(measurements_list)
-    latticies_norm = latticies/latticies[0]
+        latticies[index, i] = len(measurements_list)
+np.save('data.npy', latticies)
+latticies_norm = np.mean(latticies, axis=1)
 
-    plt.scatter(p_vec, latticies_norm, label = f'cube_size = {s}')
-    plt.xlabel('p')
-    plt.title('Number of Raussendorf Lattices vs. p')
-    plt.ylabel('Ratio N/N[p = 0]')
-    plt.legend()
+plt.scatter(p_vec, latticies_norm, label = f'cube_size = {s}')
+plt.xlabel('p')
+plt.title('Number of Raussendorf Lattices vs. p')
+plt.ylabel('N')
+plt.legend()
 
-    plt.savefig(f'probs{i}.png')
+plt.savefig(f'probs{i}.png')
