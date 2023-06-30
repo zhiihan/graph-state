@@ -16,14 +16,14 @@ height = 11
 width = 11
 length = 11
 shape = [height, length, width]
-p = 0.10
+p = 0.3
 global_seed = 1
 xoffset = 0
 yoffset = 0
 
 G = Grid([height, width, length]) # qubits
 D = Holes([height, width, length]) # holes
-cube_array = None
+cubes = None
 lattice = None
 removed_nodes = G.removed_nodes
 log = [] #html version of move_list
@@ -411,9 +411,11 @@ def algorithm1(nclicks):
                         removed_nodes.append(i)
                         move_list.append([i, 'Z']) 
     
-    global cube_array
-    cube_array = D.findlattice(removed_nodes, xoffset=xoffset, yoffset=yoffset)
-    print(f'{cube_array.shape[0]//18} Raussendorf Latticies found for p = {p}, shape = {shape}')
+    global cubes
+    cubes, cubes_scales = D.findlattice(removed_nodes, xoffset=xoffset, yoffset=yoffset)
+    print(f'{len(cubes)} Raussendorf Latticies found for p = {p}, shape = {shape}')
+
+    print(f'cubes of size {cubes_scales} found')
 
     return log, 1, 'Ran Algorithm 1'
 
@@ -424,23 +426,22 @@ def algorithm1(nclicks):
     Input('findlattice', 'n_clicks'),
     prevent_initial_call=True)
 def findlattice(nclicks):
-    global cube_array, lattice
-    if cube_array is None:
-        #or we could raiseException here, what should we do?
-        cube_array = D.findlattice(removed_nodes, xoffset=xoffset, yoffset=yoffset)
+    global cubes, lattice
+    if cubes is None:
+        #or we could raiseException here, what should we do when we have 0
+        cubes, cubes_scales =  D.findlattice(removed_nodes, xoffset=xoffset, yoffset=yoffset)
     #assert len(defect_box) == len(measurements_list)
-    print(f'{cube_array.shape[0]//18} Raussendorf Latticies found for p = {p}, shape = {shape}')
 
-    cube_number = nclicks % (cube_array.shape[0]//18)
+    print(f'{len(cubes)} Raussendorf Latticies found for p = {p}, shape = {shape}')
+    print(f'cubes of size {cubes_scales} found')
 
-    start = cube_number * 18
-    end = start + 18
+    cube_number = nclicks % (len(cubes))
 
-    if cube_array.shape[0] > 0:
+    if len(cubes) > 0:
         lattice = go.Scatter3d(
-        x=cube_array[start:end, 0],
-        y=cube_array[start:end, 1],
-        z=cube_array[start:end, 2],
+        x=cubes[cube_number][:, 0],
+        y=cubes[cube_number][:, 1],
+        z=cubes[cube_number][:, 2],
         mode='markers',
         line=dict(color='blue', width=2),
         hoverinfo='none'

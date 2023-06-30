@@ -45,3 +45,4 @@ def nx_to_plot(graph, shape):
         z_edges += z_coords
 
     return [x_nodes, y_nodes, z_nodes], [x_edges, y_edges, z_edges]
+

@@ -117,6 +117,8 @@ class Holes:
         centers = [np.array([x, y, z]) for z in range(self.shape[2]) for y in range(self.shape[1]) for x in range(self.shape[0])
                 if ((x + xoffset) % 2 == z % 2) and ((y + yoffset) % 2 == z % 2)]
 
+        cubes_scales = np.zeros((self.shape[0]//2))
+
         while scale < self.shape[0]:
             for c in centers:
                 for cube_node in self.cube:
@@ -129,19 +131,74 @@ class Holes:
                     if (np.any(arr <= 0)) or (np.any(arr >= self.shape[0])):
                         break
                 else:
-                    cube = np.empty((18, 3))
+                    cube = np.empty((18, 4))
                     for i, cube_node in enumerate(self.cube):
-                        cube[i, :] = c + cube_node*scale
-                        
+                        cube[i, :3] = c + cube_node*scale
+                        cube[i,  3] = scale 
+                    cubes_scales[scale-1] += 1
                     cubes.append(cube)
-                    print(f"scale = {scale}, center = {c}")
+                    #print(f"scale = {scale}, center = {c}")
             scale += 1
+    
+        return cubes, cubes_scales
+    
 
-        if len(cubes) > 1:
-            cube_array = np.concatenate(cubes)
-            return cube_array
-        else:
-            return cubes[0]
+    def findlatticefast(self, removed_nodes, xoffset = 0, yoffset = 0):
+        """
+        Find a raussendorf lattice.
+        """
+        
+        self.cube = [np.array([0, -1, -1]),
+                np.array([-1, 0, -1]),
+                np.array([0, 0, -1]),
+                np.array([0, 1, -1]),
+                np.array([1, 0, -1]),
+                np.array([-1, -1, 0]),
+                np.array([0, -1, 0]),
+                np.array([-1, 0, 0]),
+                np.array([-1, 1, 0]),
+                np.array([0, 1, 0]),
+                np.array([1, 1, 0]),
+                np.array([1, 0, 0]),
+                np.array([1, -1, 0]),
+                np.array([0, -1, 1]),
+                np.array([-1, 0, 1]),
+                np.array([0, 0, 1]),
+                np.array([1, 0, 1]),
+                np.array([0, 1, 1])]
+        
+        scale = 1
+        centers = [np.array([x, y, z]) for z in range(self.shape[2]) for y in range(self.shape[1]) for x in range(self.shape[0])
+                if ((x + xoffset) % 2 == z % 2) and ((y + yoffset) % 2 == z % 2)]
+        print(len(centers), 'centers')
+        cubes_scales = np.zeros((self.shape[0]//2), dtype=int)
 
-                        
+        removed_nodes_set = set(removed_nodes)
 
+        #while scale < self.shape[0]:
+        t = 0
+        import time 
+        time_delta = time.time()
+        while scale < (self.shape[0]//2):
+            t = 0
+            for c in centers:
+                for cube_node in self.cube:
+                    arr = c + cube_node*scale
+                    index = get_node_index(*arr, shape=self.shape)
+                    #filter out nodes that are measured
+                    if index in removed_nodes_set:
+                        break
+                    #filter out boundary cases
+                    if (np.any(arr <= 0)) or (np.any(arr >= self.shape[0])):
+                        break
+                else:
+                    #append the size of the cube for now
+                    cubes_scales[scale - 1] += 1
+                if t % 1000 == 0:
+                    print(f"{np.sum(cubes_scales)}, found, {t/len(centers)*100}% finished, scale = {scale/(self.shape[0]//2)*100}%")
+                    print(time.time() - time_delta)
+                    time_delta = time.time()
+                t += 1
+            scale += 2
+            
+        return cubes_scales
