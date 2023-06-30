@@ -22,7 +22,6 @@ class Holes:
             i : get_node_coords(i, self.shape)
         })
         self.graph.add_node(i)
-        
 
     def are_nodes_connected(self, node1, node2):
         x1 = np.array(self.node_coords[node1])
@@ -88,61 +87,8 @@ class Holes:
                         #self.double_holes.add_edge(tuple(h), tuple(i))
                         self.graph.add_edge(i, j)
         #print('doubleholes at ', self.double_holes.edges)
-                
-    def double_hole_remove_nodes(self):
-        """
-        Remove nodes from double holes.
-        """
-
-        subgraphs = [self.graph.subgraph(c).copy() for c in nx.connected_components(self.graph)]
-        measurements_list = []
-        for s in subgraphs:
-            measurements = []
-            for edge in s.edges:
-                start_vec = np.array(get_node_coords(edge[0], self.shape))
-                end_vec = np.array(get_node_coords(edge[1], self.shape))
-
-                diff = end_vec - start_vec
-                if diff[0] != 0:
-                    measurements.append(start_vec + np.array([diff[0], 0, 0]))
-                if diff[1] != 0:
-                    measurements.append(start_vec + np.array([0, diff[1], 0]))
-                if diff[2] != 0:
-                    measurements.append(start_vec + np.array([0, 0, diff[2]]))
-            measurements_list.append([get_node_index(*i, shape=self.shape) for i in measurements])
-
-        return measurements_list
-
-    def carve_out_box(self):
-        """
-        Carve out a box from all the double holes. 
-        """
-
-        self.minmax_vectors = []
-        subgraphs = [self.graph.subgraph(c).copy() for c in nx.connected_components(self.graph)]
-        
-        subgraphs.sort(key=lambda x: len(nx.nodes(x)))
-        measurements_list = []
-        for s in subgraphs:
-            
-            min_vector = np.array([np.inf, np.inf, np.inf])
-            max_vector = np.array([0, 0, 0], dtype=int)
-            for n in s.nodes:
-                vec = get_node_coords(n, self.shape)
-                min_vector = np.minimum(vec, min_vector).astype(int)
-                max_vector = np.maximum(vec, max_vector).astype(int)
-            self.minmax_vectors.append([min_vector, max_vector])
-            #print('box of', min_vector, max_vector)
-            
-            measurements = []
-            for i in range(min_vector[0], max_vector[0] + 1):
-                for j in range(min_vector[1], max_vector[1] + 1):
-                    for k in range(min_vector[2], max_vector[2] + 1):
-                        measurements.append(get_node_index(i, j, k, self.shape))
-            measurements_list.append(measurements)
-        return measurements_list
     
-    def findlattice(self, xoffset = 0, yoffset = 0):
+    def findlattice(self, removed_nodes, xoffset = 0, yoffset = 0):
         """
         Find a raussendorf lattice.
         """
@@ -165,41 +111,94 @@ class Holes:
                 np.array([0, 0, 1]),
                 np.array([1, 0, 1]),
                 np.array([0, 1, 1])]
-        measurements_list = []
-
+        
+        scale = 1
+        cubes = []
         centers = [np.array([x, y, z]) for z in range(self.shape[2]) for y in range(self.shape[1]) for x in range(self.shape[0])
                 if ((x + xoffset) % 2 == z % 2) and ((y + yoffset) % 2 == z % 2)]
 
-        for c in centers:
-            for cube_node in self.cube:
-                arr = c + cube_node 
-                index = get_node_index(*arr, shape=self.shape)
-                #filter out nodes that are measured
-                if index in self.node_coords.keys():
-                    break
-                #filter out boundary cases
-                if (np.any(arr <= 0)) or (np.any(arr >= self.shape[0])):
-                    break
-            else:
-                measurements_list.append(self.find_cube_measurements(c))
-        
-        return measurements_list
-                        
-    def find_cube_measurements(self, c):
+        cubes_scales = np.zeros((self.shape[0]//2))
 
-        cube = []
-        
-        for cube_node in self.cube:
-            vec = c + cube_node
-            cube.append(get_node_index(*vec, shape=self.shape))
-        
-        measurements = [get_node_index(x, y, z, shape=self.shape) for x in range(self.shape[0]) for y in range(self.shape[1]) for z in range(self.shape[2]) if get_node_index(x, y, z, self.shape) not in cube]
-        return measurements 
-
-
-
+        while scale < self.shape[0]:
+            for c in centers:
+                for cube_node in self.cube:
+                    arr = c + cube_node*scale
+                    index = get_node_index(*arr, shape=self.shape)
+                    #filter out nodes that are measured
+                    if (index in removed_nodes):
+                        break
+                    #filter out boundary cases
+                    if (np.any(arr <= 0)) or (np.any(arr >= self.shape[0])):
+                        break
+                else:
+                    cube = np.empty((18, 4))
+                    for i, cube_node in enumerate(self.cube):
+                        cube[i, :3] = c + cube_node*scale
+                        cube[i,  3] = scale 
+                    cubes_scales[scale-1] += 1
+                    cubes.append(cube)
+                    #print(f"scale = {scale}, center = {c}")
+            scale += 1
     
-#D.add_node(0, 0, 0)
-#D.add_node(0, 0, 1)
-#D.add_node(0, 0, 2)
-#print(D.graph, D.graph.nodes, D.graph.edges)
+        return cubes, cubes_scales
+    
+
+    def findlatticefast(self, removed_nodes, xoffset = 0, yoffset = 0):
+        """
+        Find a raussendorf lattice.
+        """
+        
+        self.cube = [np.array([0, -1, -1]),
+                np.array([-1, 0, -1]),
+                np.array([0, 0, -1]),
+                np.array([0, 1, -1]),
+                np.array([1, 0, -1]),
+                np.array([-1, -1, 0]),
+                np.array([0, -1, 0]),
+                np.array([-1, 0, 0]),
+                np.array([-1, 1, 0]),
+                np.array([0, 1, 0]),
+                np.array([1, 1, 0]),
+                np.array([1, 0, 0]),
+                np.array([1, -1, 0]),
+                np.array([0, -1, 1]),
+                np.array([-1, 0, 1]),
+                np.array([0, 0, 1]),
+                np.array([1, 0, 1]),
+                np.array([0, 1, 1])]
+        
+        scale = 1
+        centers = [np.array([x, y, z]) for z in range(self.shape[2]) for y in range(self.shape[1]) for x in range(self.shape[0])
+                if ((x + xoffset) % 2 == z % 2) and ((y + yoffset) % 2 == z % 2)]
+        print(len(centers), 'centers')
+        cubes_scales = np.zeros((self.shape[0]//2), dtype=int)
+
+        removed_nodes_set = set(removed_nodes)
+
+        #while scale < self.shape[0]:
+        t = 0
+        import time 
+        time_delta = time.time()
+        while scale < (self.shape[0]//2):
+            t = 0
+            for c in centers:
+                for cube_node in self.cube:
+                    arr = c + cube_node*scale
+                    index = get_node_index(*arr, shape=self.shape)
+                    #filter out nodes that are measured
+                    if index in removed_nodes_set:
+                        break
+                    #filter out boundary cases
+                    if (np.any(arr <= 0)) or (np.any(arr >= self.shape[0])):
+                        break
+                else:
+                    #append the size of the cube for now
+                    cubes_scales[scale - 1] += 1
+                if t % 1000 == 0:
+                    print(f"{np.sum(cubes_scales)}, found, {t/len(centers)*100}% finished, scale = {scale/(self.shape[0]//2)*100}%")
+                    print(time.time() - time_delta)
+                    time_delta = time.time()
+                t += 1
+            scale += 2
+            
+        return cubes_scales

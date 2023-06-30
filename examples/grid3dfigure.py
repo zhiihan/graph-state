@@ -12,17 +12,19 @@ import numpy as np
 from helperfunctions import *
 
 # Global constants
-height = 10
-width = 10
-length = 10
+height = 11
+width = 11
+length = 11
 shape = [height, length, width]
-p = 0.10
+p = 0.3
 global_seed = 1
 xoffset = 0
 yoffset = 0
 
 G = Grid([height, width, length]) # qubits
 D = Holes([height, width, length]) # holes
+cubes = None
+lattice = None
 removed_nodes = G.removed_nodes
 log = [] #html version of move_list
 move_list = [] #local variable containing moves
@@ -87,18 +89,6 @@ def update_plot(g):
                 color='skyblue'),
         )
 
-    trace_removed_nodes = go.Scatter3d(
-        x=x_removed_nodes,
-        y=y_removed_nodes,
-        z=z_removed_nodes,
-        mode='markers',
-        marker=dict(symbol='circle',
-                size=10,
-                color='red'),
-        visible='legendonly',
-        text=[j for j in removed_nodes]
-    )
-
     trace_holes = go.Scatter3d(
         x=h_nodes[0],
         y=h_nodes[1],
@@ -119,7 +109,10 @@ def update_plot(g):
     )
 
     #Include the traces we want to plot and create a figure
-    data = [trace_nodes, trace_edges, trace_removed_nodes, trace_holes, trace_holes_edges]
+    if lattice:
+        data = [trace_nodes, trace_edges, trace_holes, trace_holes_edges, lattice]
+    else:
+        data = [trace_nodes, trace_edges, trace_holes, trace_holes_edges]
     fig = go.Figure(data=data)
     fig.layout.height = 600
     fig.update_layout(
@@ -218,8 +211,7 @@ def display_hover_data(hoverData):
     Output('draw-plot','data'),
     Input('basic-interactions', 'clickData'), State('radio-items', 'value'), State('click-data', 'children'))
 def display_click_data(clickData, measurementChoice, clickLog):
-    global removed_nodes
-    global move_list
+    global removed_nodes, move_list
     if not clickData:
         return dash.no_update, dash.no_update
     point = clickData["points"][0]
@@ -268,10 +260,8 @@ def update_output(value):
     Input('reset', 'n_clicks'),
     prevent_initial_call=True)
 def reset_grid(input, move_list_reset = True):
-    global G
-    global removed_nodes
-    global log
-    global move_list
+    global G, removed_nodes, log, move_list
+    
     G = Grid(shape)
     removed_nodes = []
     fig = update_plot(G)
@@ -293,8 +283,9 @@ def reset_seed(nclicks, seed):
     """
     Randomly measure qubits.
     """
-    fig, log = reset_grid(nclicks)
     global D
+    fig, log = reset_grid(nclicks)
+    
     D = Holes(shape)
     if seed is not None:
         random.seed(int(seed))
@@ -303,7 +294,6 @@ def reset_seed(nclicks, seed):
     # p is the probability of losing a qubit
 
     measurementChoice = 'Z'
-    #D.add_node(13)
     
     for i in range(height*length*width):
         if random.random() < p:
@@ -407,7 +397,7 @@ def algorithm1(nclicks):
     xoffset = np.argmax(hole_locations) // 2
     yoffset = np.argmax(hole_locations) % 2
 
-    print(xoffset, yoffset)
+    print(f"xoffset, yoffset = {(xoffset, yoffset)}")
 
     for z in range(G.shape[2]):
         for y in range(G.shape[1]):
@@ -420,7 +410,12 @@ def algorithm1(nclicks):
                         log.append(html.Br())
                         removed_nodes.append(i)
                         move_list.append([i, 'Z']) 
+    
+    global cubes
+    cubes, cubes_scales = D.findlattice(removed_nodes, xoffset=xoffset, yoffset=yoffset)
+    print(f'{len(cubes)} Raussendorf Latticies found for p = {p}, shape = {shape}')
 
+    print(f'cubes of size {cubes_scales} found')
 
     return log, 1, 'Ran Algorithm 1'
 
@@ -431,50 +426,27 @@ def algorithm1(nclicks):
     Input('findlattice', 'n_clicks'),
     prevent_initial_call=True)
 def findlattice(nclicks):
-    #defect_box = D.carve_out_box()
-    global measurements_list
-    if nclicks == 1:
-        measurements_list = D.findlattice(xoffset=xoffset, yoffset=yoffset)
-    #double_holes = D.double_hole_remove_nodes()
-
+    global cubes, lattice
+    if cubes is None:
+        #or we could raiseException here, what should we do when we have 0
+        cubes, cubes_scales =  D.findlattice(removed_nodes, xoffset=xoffset, yoffset=yoffset)
     #assert len(defect_box) == len(measurements_list)
-    print(f'{len(measurements_list)} Raussendorf Latticies found for p = {p}, shape = {shape}')
 
-    if measurements_list:
-        reset_grid(nclicks, move_list_reset=False)
-        # Measure the previous grid before we did find lattice
-        for i, measurementChoice in move_list:
-            G.handle_measurements(i, measurementChoice)
-            log.append(f"{i}, Z; ")
-            log.append(html.Br())
-            removed_nodes.append(i)
+    print(f'{len(cubes)} Raussendorf Latticies found for p = {p}, shape = {shape}')
+    print(f'cubes of size {cubes_scales} found')
 
-        # Carve out the inner box
-        """
-        for i in defect_box[nclicks % len(measurements_list)]:
-            if i not in removed_nodes:
-                G.handle_measurements(i, 'Z')
-                log.append(f"{i}, Z; ")
-                log.append(html.Br())
-                removed_nodes.append(i)
-        """
-        # Carve out the outer box
-        for i in measurements_list[nclicks % len(measurements_list)]:
-            if i not in removed_nodes:
-                G.handle_measurements(i, 'Z')
-                log.append(f"{i}, Z; ")
-                log.append(html.Br())
-                removed_nodes.append(i)
+    cube_number = nclicks % (len(cubes))
 
-        """
-        for i in double_holes[nclicks % len(measurements_list)]:
-            if i not in removed_nodes:
-                G.handle_measurements(i, 'Z')
-                log.append(f"{i}, Z; ")
-                log.append(html.Br())
-                removed_nodes.append(i)
-        """
-    
+    if len(cubes) > 0:
+        lattice = go.Scatter3d(
+        x=cubes[cube_number][:, 0],
+        y=cubes[cube_number][:, 1],
+        z=cubes[cube_number][:, 2],
+        mode='markers',
+        line=dict(color='blue', width=2),
+        hoverinfo='none'
+    )
+
 
     return log, 1, 'Ran Algorithm 1'
 

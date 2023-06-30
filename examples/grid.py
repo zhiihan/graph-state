@@ -1,7 +1,6 @@
 from graph_state import GraphState
 from collections import Counter
 import numpy as np
-import random
 import networkx as nx
 
 class Grid(GraphState):
@@ -60,15 +59,6 @@ class Grid(GraphState):
                     self.node_coords.update({
                         self.get_node_index(x, y, z) : np.array([x, y, z])
                     })      
-
-    def damage_grid(self, p, seed=None):
-        np.random.seed(seed=seed)
-        # p is the probability of losing a qubit
-
-        for i in range(self.shape[0]*self.shape[1]*self.shape[2]):
-            if np.random.random() < p:
-                self.measure(i)
-                self.removed_nodes.append(i)
 
     def adjaencyMatrix(self):
         return nx.to_numpy_array(self.to_networkx())
