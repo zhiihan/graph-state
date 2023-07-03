@@ -8,44 +8,29 @@ from helperfunctions import *
 
 xoffset = 0
 yoffset = 0
-shape = [15, 15, 15]
-G = Grid(shape) # qubits
-D = Holes(shape) # holes
-removed_nodes = G.removed_nodes
-move_list = [] #local variable containing moves
 
-def reset_grid(input, move_list_reset = True, shape = shape):
-    global G
-    global removed_nodes
-    global move_list
-    global D
-    G = Grid(shape)
-    removed_nodes = []
-    D = Holes(shape)
-    move_list = []
 
-def reset_seed(nclicks, seed, shape=shape):
+def reset_seed(seed, shape):
     """
     Randomly measure qubits.
     """
-    global D
+    global D, removed_nodes
     D = Holes(shape)
+    removed_nodes = set()
 
     random.seed(int(seed))
     # p is the probability of losing a qubit
 
     measurementChoice = 'Z'
-    #D.add_node(13)
     for i in range(shape[0]*shape[1]*shape[2]):
         if random.random() < p:
-            removed_nodes.append(i)
-            #G.handle_measurements(i, measurementChoice)
-            #move_list.append([i, measurementChoice])
-            D.add_node(i)
-    #D.add_edges()
+            removed_nodes.add(i)
+            D.add_node(i, graph_add_node=False)
+        if i % 10000000 == 0:
+            print(i/(shape[0]*shape[1]*shape[2])*100)
 
 
-def algorithm1(nclicks, shape=shape):
+def algorithm1(shape):
     holes = D.graph.nodes
     hole_locations = np.zeros(4)
     global xoffset, yoffset
@@ -63,45 +48,48 @@ def algorithm1(nclicks, shape=shape):
 
     #print(xoffset, yoffset)
 
-    for z in range(G.shape[2]):
-        for y in range(G.shape[1]):
-            for x in range(G.shape[0]):
+    for z in range(shape[2]):
+        for y in range(shape[1]):
+            for x in range(shape[0]):
                 if ((x + xoffset) % 2 == z % 2) and ((y + yoffset) % 2 == z % 2):
-                    i = G.get_node_index(x, y, z)
-                    removed_nodes.append(i)
+                    i = get_node_index(x, y, z, shape)
+                    removed_nodes.add(i)
                     #G.handle_measurements(i, 'Z')
                     
                     #move_list.append([i, 'Z']) 
 
 
 import matplotlib.pyplot as plt
+import time
 
-
-s = [50, 50, 50]
+shape = [200, 200, 200]
 samples = 1
-n_cubes = np.empty((25, s[0]//2, samples))
-p_vec = np.linspace(0, 0.25, 25)
+n_cubes = np.empty((25, shape[0]//2, samples))
+p_vec = np.linspace(0.1, 0.25, 25)
+D = Holes(shape) # holes
+start = time.time()
 for index_seed, seed in enumerate(range(samples)):
     for index_p, p in enumerate(p_vec):
-        reset_grid(1, shape=s)
-        reset_seed(1, seed, shape=s)
+        reset_seed(seed, shape)
         print('done reset seed')
-        algorithm1(1, shape=s)
+        algorithm1(shape)
         print('done alg')
         cube_scales = D.findlatticefast(removed_nodes, xoffset=xoffset, yoffset=yoffset)
         print('done search')
         n_cubes[index_p, :, index_seed] = cube_scales
 
-        print(f'{np.sum(n_cubes[index_p, :, index_seed], dtype=int)} Raussendorf Latticies found for p = {p}, shape = {s}, cube_dim = {cube_scales}')
-        
+        print(f'{np.sum(n_cubes[index_p, :, index_seed], dtype=int)} Raussendorf Latticies found for p = {p}, shape = {shape}, cube_dim = {cube_scales}')
+        end1loop = time.time()
+        print((end1loop-start)/60, 'mins = 1 loop time ')
+print((time.time() - start)/60, 'mins = time for 25 points')
 #np.save('data.npy', n_cubes)
 print(n_cubes.shape)
 n_cubes_avg = np.mean(n_cubes, axis=2)
 
 plt.figure()
-plt.scatter(p_vec, n_cubes_avg[:, 0], label = f'shape = {s}, cubesize={1}')
-plt.scatter(p_vec, n_cubes_avg[:, 0] + n_cubes_avg[:, 2], label = f'shape = {s}, cubesize={1, 3}')
-plt.scatter(p_vec, n_cubes_avg[:, 0] + n_cubes_avg[:, 2] + n_cubes_avg[:, 4], label = f'shape = {s}, cubesize={1, 3, 5}')
+plt.scatter(p_vec, n_cubes_avg[:, 0], label = f'shape = {shape}, cubesize={1}')
+plt.scatter(p_vec, n_cubes_avg[:, 0] + n_cubes_avg[:, 2], label = f'shape = {shape}, cubesize={1, 3}')
+plt.scatter(p_vec, n_cubes_avg[:, 0] + n_cubes_avg[:, 2] + n_cubes_avg[:, 4], label = f'shape = {shape}, cubesize={1, 3, 5}')
 plt.xlabel('p')
 plt.title('Number of Raussendorf Lattices vs. p')
 plt.ylabel('N')
@@ -111,7 +99,7 @@ plt.savefig(f'probs50.png')
 
 for i in [4, 12, 20]:
     plt.figure()
-    plt.scatter(range(s[0]//2), n_cubes_avg[i, :], label = f'p = {p_vec[i]}, shape={s}')
+    plt.scatter(range(shape[0]//2), n_cubes_avg[i, :], label = f'p = {p_vec[i]}, shape={shape}')
     plt.xlabel('Lattice sizes')
     plt.title('Distribution of lattice sizes')
     plt.ylabel('Number of Raussendorf Lattices count')
@@ -119,9 +107,9 @@ for i in [4, 12, 20]:
     plt.savefig(f'hist{i}.png')
 
 plt.figure()
-plt.scatter(p_vec, n_cubes_avg[:, 0], label = f'shape = {s}, cubesize={1}')
-plt.scatter(p_vec, n_cubes_avg[:, 2], label = f'shape = {s}, cubesize={3}')
-plt.scatter(p_vec, n_cubes_avg[:, 4], label = f'shape = {s}, cubesize={5}')
+plt.scatter(p_vec, n_cubes_avg[:, 0], label = f'shape = {shape}, cubesize={1}')
+plt.scatter(p_vec, n_cubes_avg[:, 2], label = f'shape = {shape}, cubesize={3}')
+plt.scatter(p_vec, n_cubes_avg[:, 4], label = f'shape = {shape}, cubesize={5}')
 plt.xlabel('p')
 plt.title('Number of Raussendorf Lattices vs. p')
 plt.ylabel('N')

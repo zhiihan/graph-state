@@ -1,6 +1,7 @@
 import networkx as nx
 import numpy as np
 from helperfunctions import *
+import time
 
 class Holes:
     def __init__(self, shape):
@@ -17,11 +18,12 @@ class Holes:
         index_z = (i // (self.shape[0] * self.shape[1])) % self.shape[2]
         return np.array([index_x, index_y, index_z])
 
-    def add_node(self, i):
+    def add_node(self, i, graph_add_node=True):
         self.node_coords.update({
             i : get_node_coords(i, self.shape)
         })
-        self.graph.add_node(i)
+        if graph_add_node:
+            self.graph.add_node(i)
 
     def are_nodes_connected(self, node1, node2):
         x1 = np.array(self.node_coords[node1])
@@ -82,11 +84,7 @@ class Holes:
                 x_diff = np.abs(np.array(self.node_coords[i]) - np.array(self.node_coords[j]))
                 if np.sum(x_diff) == 2:
                     if not ((x_diff[0] == 2) or (x_diff[1] == 2) or (x_diff[2] == 2)):
-                        #self.double_holes.add_node(tuple(h))
-                        #self.double_holes.add_node(tuple(i))
-                        #self.double_holes.add_edge(tuple(h), tuple(i))
                         self.graph.add_edge(i, j)
-        #print('doubleholes at ', self.double_holes.edges)
     
     def findlattice(self, removed_nodes, xoffset = 0, yoffset = 0):
         """
@@ -170,32 +168,32 @@ class Holes:
         scale = 1
         centers = [np.array([x, y, z]) for z in range(self.shape[2]) for y in range(self.shape[1]) for x in range(self.shape[0])
                 if ((x + xoffset) % 2 == z % 2) and ((y + yoffset) % 2 == z % 2)]
-        print(len(centers), 'centers')
         cubes_scales = np.zeros((self.shape[0]//2), dtype=int)
 
-        removed_nodes_set = set(removed_nodes)
-
+        
+        removed_nodes_set = { index:(True if (index in removed_nodes) else False) for index in range(self.shape[0]*self.shape[1]*self.shape[2])}
+        print('done hashmap')
         #while scale < self.shape[0]:
         t = 0
-        import time 
+         
         time_delta = time.time()
-        while scale < (self.shape[0]//2):
+        while scale < 5:
             t = 0
             for c in centers:
                 for cube_node in self.cube:
                     arr = c + cube_node*scale
                     index = get_node_index(*arr, shape=self.shape)
-                    #filter out nodes that are measured
-                    if index in removed_nodes_set:
-                        break
                     #filter out boundary cases
                     if (np.any(arr <= 0)) or (np.any(arr >= self.shape[0])):
+                        break
+                    #filter out nodes that are measured
+                    if removed_nodes_set[index]:
                         break
                 else:
                     #append the size of the cube for now
                     cubes_scales[scale - 1] += 1
-                if t % 1000 == 0:
-                    print(f"{np.sum(cubes_scales)}, found, {t/len(centers)*100}% finished, scale = {scale/(self.shape[0]//2)*100}%")
+                if t % 100000 == 0:
+                    print(f"{np.sum(cubes_scales)}, found, {t/len(centers)*100}% finished, scale = {scale}")
                     print(time.time() - time_delta)
                     time_delta = time.time()
                 t += 1
