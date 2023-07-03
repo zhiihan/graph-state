@@ -62,7 +62,7 @@ def algorithm1(shape):
 import matplotlib.pyplot as plt
 import time
 
-shape = [200, 200, 200]
+shape = [1000, 1000, 1000]
 samples = 1
 n_cubes = np.empty((25, shape[0]//2, samples))
 p_vec = np.linspace(0.1, 0.25, 25)
