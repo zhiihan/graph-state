@@ -168,11 +168,10 @@ class Holes:
         scale = 1
         centers = [np.array([x, y, z]) for z in range(self.shape[2]) for y in range(self.shape[1]) for x in range(self.shape[0])
                 if ((x + xoffset) % 2 == z % 2) and ((y + yoffset) % 2 == z % 2)]
-        cubes_scales = np.zeros((self.shape[0]//2), dtype=int)
+        cubes_scales = np.zeros(5, dtype=int)
 
         
         removed_nodes_set = { index:(True if (index in removed_nodes) else False) for index in range(self.shape[0]*self.shape[1]*self.shape[2])}
-        print('done hashmap')
         t = 0
          
         time_delta = time.time()

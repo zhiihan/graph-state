@@ -61,7 +61,7 @@ def main(p):
 
     end1loop = time.time()
     print((end1loop-start)/60, 'mins = 1 loop time ')
-    return n_cubes
+    return cube_scales
 
 
 
@@ -69,12 +69,17 @@ import matplotlib.pyplot as plt
 import time
 import multiprocessing as mp
 
-cpu_cores = 16
+cpu_cores = 25
 
-shape = [50, 50, 50]
+shape = [1000, 1000, 1000]
 samples = 1
 n_cubes = np.empty((25, shape[0]//2, samples))
 p_vec = np.linspace(0.0, 0.25, 25)
+
+def main2(p):
+    print(p)
+    time.sleep(0.5)
+    return np.array([p, 0])
 
 
 if __name__ == "__main__":
@@ -84,48 +89,43 @@ if __name__ == "__main__":
     pool.close()
     pool.join()
 
-    for result in results:
-        print(result, 'done')
+    n_cubes = np.vstack(results)
+        
     print(time.time() - start)
-"""
 
-for index_seed, seed in enumerate(range(samples)):
-    for index_p, p in enumerate(p_vec):
-        n_cubes = main(p, shape)
+    np.save('data.npy', n_cubes)
+    print(n_cubes.shape, p_vec.shape)
 
-        print(f'{np.sum(n_cubes[index_p, :, index_seed], dtype=int)} Raussendorf Latticies found for p = {p}, shape = {shape}, cube_dim = {n_cubes}')
-        """
-np.save('data.npy', n_cubes)
-print(n_cubes.shape)
-n_cubes_avg = np.mean(n_cubes, axis=2)
-
-plt.figure()
-plt.scatter(p_vec, n_cubes_avg[:, 0], label = f'shape = {shape}, cubesize={1}')
-plt.scatter(p_vec, n_cubes_avg[:, 0] + n_cubes_avg[:, 2], label = f'shape = {shape}, cubesize={1, 3}')
-plt.scatter(p_vec, n_cubes_avg[:, 0] + n_cubes_avg[:, 2] + n_cubes_avg[:, 4], label = f'shape = {shape}, cubesize={1, 3, 5}')
-plt.xlabel('p')
-plt.title('Number of Raussendorf Lattices vs. p')
-plt.ylabel('N')
-plt.legend()
-
-plt.savefig(f'probs50.png')
-
-for i in [4, 12, 20]:
     plt.figure()
-    plt.scatter(range(shape[0]//2), n_cubes_avg[i, :], label = f'p = {p_vec[i]}, shape={shape}')
-    plt.xlabel('Lattice sizes')
-    plt.title('Distribution of lattice sizes')
-    plt.ylabel('Number of Raussendorf Lattices count')
+    plt.scatter(p_vec, n_cubes[:, 0], label = f'shape = {shape}, cubesize={1}')
+    plt.scatter(p_vec, n_cubes[:, 0] + n_cubes[:, 2], label = f'shape = {shape}, cubesize={1, 3}')
+    #plt.scatter(p_vec, n_cubes[:, 0] + n_cubes[:, 2] + n_cubes[:, 4], label = f'shape = {shape}, cubesize={1, 3, 5}')
+    plt.xlabel('p')
+    plt.title('Number of Raussendorf Lattices vs. p')
+    plt.ylabel('N')
     plt.legend()
-    plt.savefig(f'hist{i}.png')
 
-plt.figure()
-plt.scatter(p_vec, n_cubes_avg[:, 0], label = f'shape = {shape}, cubesize={1}')
-plt.scatter(p_vec, n_cubes_avg[:, 2], label = f'shape = {shape}, cubesize={3}')
-plt.scatter(p_vec, n_cubes_avg[:, 4], label = f'shape = {shape}, cubesize={5}')
-plt.xlabel('p')
-plt.title('Number of Raussendorf Lattices vs. p')
-plt.ylabel('N')
-plt.legend()
+    plt.savefig(f'probs{shape[0]}.png')
 
-plt.savefig(f'probs50_separate.png')
+    """
+    for i in [4, 12, 20]:
+        plt.figure()
+        plt.scatter(range(shape[0]//2), n_cubes[i, :], label = f'p = {p_vec[i]}, shape={shape}')
+        plt.xlabel('Lattice sizes')
+        plt.title('Distribution of lattice sizes')
+        plt.ylabel('Number of Raussendorf Lattices count')
+        plt.legend()
+        plt.savefig(f'hist{i}.png')
+    """
+
+    plt.figure()
+    plt.scatter(p_vec, n_cubes[:, 0], label = f'shape = {shape}, cubesize={1}')
+    plt.scatter(p_vec, n_cubes[:, 2], label = f'shape = {shape}, cubesize={3}')
+    #plt.scatter(p_vec, n_cubes[:, 4], label = f'shape = {shape}, cubesize={5}')
+    plt.xlabel('p')
+    plt.title('Number of Raussendorf Lattices vs. p')
+    plt.ylabel('N')
+    plt.legend()
+
+    plt.savefig(f'probs{shape[0]}_separate.png')
+
