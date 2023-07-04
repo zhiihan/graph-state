@@ -1,20 +1,12 @@
-from grid import Grid
 from holes import Holes 
 import random
 import numpy as np
 from helperfunctions import *
 
-# Global constants
-
-xoffset = 0
-yoffset = 0
-
-
-def reset_seed(seed, shape):
+def reset_seed(p, seed, shape):
     """
     Randomly measure qubits.
     """
-    global D, removed_nodes
     D = Holes(shape)
     removed_nodes = set()
 
@@ -28,12 +20,12 @@ def reset_seed(seed, shape):
             D.add_node(i, graph_add_node=False)
         if i % 10000000 == 0:
             print(i/(shape[0]*shape[1]*shape[2])*100)
+    return D, removed_nodes
 
 
-def algorithm1(shape):
+def algorithm1(D, removed_nodes, shape):
     holes = D.graph.nodes
     hole_locations = np.zeros(4)
-    global xoffset, yoffset
 
     #counting where the holes are
     for h in holes:
@@ -46,43 +38,64 @@ def algorithm1(shape):
     xoffset = np.argmax(hole_locations) // 2
     yoffset = np.argmax(hole_locations) % 2
 
-    #print(xoffset, yoffset)
-
     for z in range(shape[2]):
         for y in range(shape[1]):
             for x in range(shape[0]):
                 if ((x + xoffset) % 2 == z % 2) and ((y + yoffset) % 2 == z % 2):
                     i = get_node_index(x, y, z, shape)
-                    removed_nodes.add(i)
-                    #G.handle_measurements(i, 'Z')
-                    
-                    #move_list.append([i, 'Z']) 
+                    removed_nodes.add(i) 
+    
+    return xoffset, yoffset
+
+def main(p):
+    start = time.time()
+
+    seed = 1
+
+    D, removed_nodes = reset_seed(p, seed, shape)
+    #print('done reset seed')
+    xoffset, yoffset = algorithm1(D, removed_nodes, shape)
+    #print('done alg')
+    cube_scales = D.findlatticefast(removed_nodes, p, xoffset=xoffset, yoffset=yoffset)
+    #print('done search')
+
+    end1loop = time.time()
+    print((end1loop-start)/60, 'mins = 1 loop time ')
+    return n_cubes
+
 
 
 import matplotlib.pyplot as plt
 import time
+import multiprocessing as mp
 
-shape = [1000, 1000, 1000]
+cpu_cores = 16
+
+shape = [50, 50, 50]
 samples = 1
 n_cubes = np.empty((25, shape[0]//2, samples))
-p_vec = np.linspace(0.1, 0.25, 25)
-D = Holes(shape) # holes
-start = time.time()
+p_vec = np.linspace(0.0, 0.25, 25)
+
+
+if __name__ == "__main__":
+    start = time.time()
+    pool = mp.Pool(processes=cpu_cores)
+    results = pool.map(main, p_vec)
+    pool.close()
+    pool.join()
+
+    for result in results:
+        print(result, 'done')
+    print(time.time() - start)
+"""
+
 for index_seed, seed in enumerate(range(samples)):
     for index_p, p in enumerate(p_vec):
-        reset_seed(seed, shape)
-        print('done reset seed')
-        algorithm1(shape)
-        print('done alg')
-        cube_scales = D.findlatticefast(removed_nodes, xoffset=xoffset, yoffset=yoffset)
-        print('done search')
-        n_cubes[index_p, :, index_seed] = cube_scales
+        n_cubes = main(p, shape)
 
-        print(f'{np.sum(n_cubes[index_p, :, index_seed], dtype=int)} Raussendorf Latticies found for p = {p}, shape = {shape}, cube_dim = {cube_scales}')
-        end1loop = time.time()
-        print((end1loop-start)/60, 'mins = 1 loop time ')
-print((time.time() - start)/60, 'mins = time for 25 points')
-#np.save('data.npy', n_cubes)
+        print(f'{np.sum(n_cubes[index_p, :, index_seed], dtype=int)} Raussendorf Latticies found for p = {p}, shape = {shape}, cube_dim = {n_cubes}')
+        """
+np.save('data.npy', n_cubes)
 print(n_cubes.shape)
 n_cubes_avg = np.mean(n_cubes, axis=2)
 

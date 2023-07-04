@@ -141,7 +141,7 @@ class Holes:
         return cubes, cubes_scales
     
 
-    def findlatticefast(self, removed_nodes, xoffset = 0, yoffset = 0):
+    def findlatticefast(self, removed_nodes, p, xoffset = 0, yoffset = 0):
         """
         Find a raussendorf lattice.
         """
@@ -173,28 +173,32 @@ class Holes:
         
         removed_nodes_set = { index:(True if (index in removed_nodes) else False) for index in range(self.shape[0]*self.shape[1]*self.shape[2])}
         print('done hashmap')
-        #while scale < self.shape[0]:
         t = 0
          
         time_delta = time.time()
+        cubes = []
         while scale < 5:
             t = 0
             for c in centers:
                 for cube_node in self.cube:
-                    arr = c + cube_node*scale
+                    arr = c + cube_node*scale # Compute a coordinate
                     index = get_node_index(*arr, shape=self.shape)
                     #filter out boundary cases
-                    if (np.any(arr <= 0)) or (np.any(arr >= self.shape[0])):
+                    if np.any((arr <= 0) | (arr >= self.shape[0])):
                         break
                     #filter out nodes that are measured
                     if removed_nodes_set[index]:
                         break
                 else:
+                    #cube = np.empty((18, 3))
+                    #for i, cube_node in enumerate(self.cube):
+                    #    cube[i, :3] = c + cube_node*scale
                     #append the size of the cube for now
+                    #cubes.append(cube)
                     cubes_scales[scale - 1] += 1
                 if t % 100000 == 0:
-                    print(f"{np.sum(cubes_scales)}, found, {t/len(centers)*100}% finished, scale = {scale}")
-                    print(time.time() - time_delta)
+                    print(f"{np.sum(cubes_scales)}, found for p ={p}, {t/len(centers)*100}% finished, scale = {scale}")
+                    #print(time.time() - time_delta)
                     time_delta = time.time()
                 t += 1
             scale += 2
