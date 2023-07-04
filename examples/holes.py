@@ -171,7 +171,7 @@ class Holes:
         cubes_scales = np.zeros(5, dtype=int)
 
         
-        removed_nodes_set = { index:(True if (index in removed_nodes) else False) for index in range(self.shape[0]*self.shape[1]*self.shape[2])}
+        #removed_nodes_set = { index:(True if (index in removed_nodes) else False) for index in range(self.shape[0]*self.shape[1]*self.shape[2])}
         t = 0
          
         time_delta = time.time()
@@ -186,7 +186,7 @@ class Holes:
                     if np.any((arr <= 0) | (arr >= self.shape[0])):
                         break
                     #filter out nodes that are measured
-                    if removed_nodes_set[index]:
+                    if (index in removed_nodes):
                         break
                 else:
                     #cube = np.empty((18, 3))
