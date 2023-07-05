@@ -89,6 +89,12 @@ class Holes:
     def findlattice(self, removed_nodes, xoffset = 0, yoffset = 0):
         """
         Find a raussendorf lattice.
+
+        Returns: cubes: a list containing a cube:
+
+            cube: np.array with shape (18, 4) containing the (x, y, z, scale)
+
+        
         """
         
         self.cube = [np.array([0, -1, -1]),
@@ -116,26 +122,33 @@ class Holes:
                 if ((x + xoffset) % 2 == z % 2) and ((y + yoffset) % 2 == z % 2)]
 
         cubes_scales = np.zeros((self.shape[0]//2))
+        cube_centers = []
 
-        while scale < self.shape[0]:
+        while scale < 2:
             for c in centers:
-                for cube_node in self.cube:
-                    arr = c + cube_node*scale
+                for cube_vec in self.cube:
+                    arr = c + cube_vec*scale
                     index = get_node_index(*arr, shape=self.shape)
                     #filter out nodes that are measured
                     if (index in removed_nodes):
                         break
                     #filter out boundary cases
-                    if (np.any(arr <= 0)) or (np.any(arr >= self.shape[0])):
+                    if np.any((arr <= 0) | (arr >= self.shape[0])):
                         break
                 else:
-                    cube = np.empty((18, 4))
-                    for i, cube_node in enumerate(self.cube):
-                        cube[i, :3] = c + cube_node*scale
-                        cube[i,  3] = scale 
+                    
+                    cube = np.empty((19, 3))
+                    """
+                    Format:
+                    cube[0, :] = center of the cube
+                    cube[:19, :] = coordinates
+                    """
+                    cube[0, :] = c
+                    for i, cube_vec in enumerate(self.cube):
+                        cube[i+1, :3] = c + cube_vec*scale
+                        #cube[i,  3] = scale 
                     cubes_scales[scale-1] += 1
                     cubes.append(cube)
-                    #print(f"scale = {scale}, center = {c}")
             scale += 1
     
         return cubes, cubes_scales
@@ -176,11 +189,11 @@ class Holes:
          
         time_delta = time.time()
         cubes = []
-        while scale < 5:
+        while scale < 2:
             t = 0
             for c in centers:
-                for cube_node in self.cube:
-                    arr = c + cube_node*scale # Compute a coordinate
+                for cube_vec in self.cube:
+                    arr = c + cube_vec*scale # Compute a coordinate
                     index = get_node_index(*arr, shape=self.shape)
                     #filter out boundary cases
                     if np.any((arr <= 0) | (arr >= self.shape[0])):
@@ -190,8 +203,8 @@ class Holes:
                         break
                 else:
                     #cube = np.empty((18, 3))
-                    #for i, cube_node in enumerate(self.cube):
-                    #    cube[i, :3] = c + cube_node*scale
+                    #for i, cube_vec in enumerate(self.cube):
+                    #    cube[i, :3] = c + cube_vec*scale
                     #append the size of the cube for now
                     #cubes.append(cube)
                     cubes_scales[scale - 1] += 1
@@ -203,3 +216,33 @@ class Holes:
             scale += 2
             
         return cubes_scales
+
+    def findconnectedlattice(self, cubes):
+        """
+        Extract the data from the numpy array.
+        """
+        C = nx.Graph() # C is an object that contains all the linked centers
+        for c in cubes:
+            center = tuple(c[0, :])
+            C.add_node(center)
+
+        for n in C.nodes():
+            for n2 in C.nodes():
+                if taxicab_metric(n, n2) == 2:
+                    C.add_edge(n, n2)
+        
+        connected_cubes = [C.subgraph(c).copy() for c in nx.connected_components(C)]
+        return connected_cubes
+    
+    def connected_cube_to_nodes(self, connected_cubes):
+        X = nx.Graph() # X is the same object as C but it contains the actual verticies. 
+        
+        for node in connected_cubes.nodes():
+            for cube_vec in self.cube:
+                X.add_node(tuple(node + cube_vec))
+        
+        for n in X.nodes():
+            for n2 in X.nodes():
+                if taxicab_metric(n, n2) == 1:
+                    X.add_edge(n, n2)
+        return X

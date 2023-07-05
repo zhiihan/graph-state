@@ -53,11 +53,8 @@ def main(p):
     seed = 1
 
     D, removed_nodes = reset_seed(p, seed, shape)
-    #print('done reset seed')
     xoffset, yoffset = algorithm1(D, removed_nodes, shape)
-    #print('done alg')
     cube_scales = D.findlatticefast(removed_nodes, p, xoffset=xoffset, yoffset=yoffset)
-    #print('done search')
 
     end1loop = time.time()
     print((end1loop-start)/60, 'mins = 1 loop time ')
@@ -99,7 +96,6 @@ if __name__ == "__main__":
     plt.figure()
     plt.scatter(p_vec, n_cubes[:, 0], label = f'shape = {shape}, cubesize={1}')
     plt.scatter(p_vec, n_cubes[:, 0] + n_cubes[:, 2], label = f'shape = {shape}, cubesize={1, 3}')
-    #plt.scatter(p_vec, n_cubes[:, 0] + n_cubes[:, 2] + n_cubes[:, 4], label = f'shape = {shape}, cubesize={1, 3, 5}')
     plt.xlabel('p')
     plt.title('Number of Raussendorf Lattices vs. p')
     plt.ylabel('N')
@@ -107,21 +103,9 @@ if __name__ == "__main__":
 
     plt.savefig(f'probs{shape[0]}.png')
 
-    """
-    for i in [4, 12, 20]:
-        plt.figure()
-        plt.scatter(range(shape[0]//2), n_cubes[i, :], label = f'p = {p_vec[i]}, shape={shape}')
-        plt.xlabel('Lattice sizes')
-        plt.title('Distribution of lattice sizes')
-        plt.ylabel('Number of Raussendorf Lattices count')
-        plt.legend()
-        plt.savefig(f'hist{i}.png')
-    """
-
     plt.figure()
     plt.scatter(p_vec, n_cubes[:, 0], label = f'shape = {shape}, cubesize={1}')
     plt.scatter(p_vec, n_cubes[:, 2], label = f'shape = {shape}, cubesize={3}')
-    #plt.scatter(p_vec, n_cubes[:, 4], label = f'shape = {shape}, cubesize={5}')
     plt.xlabel('p')
     plt.title('Number of Raussendorf Lattices vs. p')
     plt.ylabel('N')
