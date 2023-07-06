@@ -17,7 +17,7 @@ height = 11
 width = 11
 length = 11
 shape = [height, length, width]
-p = 0.1
+p = 0.20
 global_seed = 1
 xoffset = 0
 yoffset = 0
@@ -27,7 +27,8 @@ D = Holes([height, width, length]) # holes
 cubes = None
 lattice = None
 lattice_edges = None
-removed_nodes = set()
+connected_cubes = None
+removed_nodes = np.zeros(height*width*length, dtype=bool)
 log = [] #html version of move_list
 move_list = [] #local variable containing moves
 camera_state = {
@@ -60,8 +61,9 @@ def update_plot(g, plotoptions=['Qubits', 'Holes', 'Lattice']):
     gnx = g.to_networkx()
     hnx = D.to_networkx()
 
-    for i in removed_nodes:
-        gnx.remove_node(i)
+    for i , value in enumerate(removed_nodes):
+        if value == True:
+            gnx.remove_node(i)
 
     g_nodes, g_edges = nx_to_plot(gnx, shape)
     h_nodes, h_edges = nx_to_plot(hnx, shape)
@@ -250,8 +252,8 @@ def display_click_data(clickData, measurementChoice, clickLog):
     else: 
         i = G.get_node_index(point['x'], point['y'], point['z'])
         # Update the plot based on the node clicked
-        if i not in removed_nodes:
-            removed_nodes.add(i)
+        if removed_nodes[i] == False :
+            removed_nodes[i] = True
             G.handle_measurements(i, measurementChoice)
             move_list.append([i, measurementChoice])
             print('clickedon', i)
@@ -289,10 +291,10 @@ def update_output(value):
     Input('reset', 'n_clicks'),
     prevent_initial_call=True)
 def reset_grid(input, move_list_reset = True):
-    global G, removed_nodes, log, move_list, lattice, lattice_edges
+    global G, removed_nodes, log, move_list, lattice, lattice_edges, connected_cubes
     
     G = Grid(shape)
-    removed_nodes = set()
+    removed_nodes = np.zeros(height*width*length, dtype=bool)
     fig = update_plot(G)
     log = []
     if move_list_reset:
@@ -301,6 +303,7 @@ def reset_grid(input, move_list_reset = True):
         move_list = []
         lattice = None
         lattice_edges = None
+        connected_cubes = None
     # Make sure the view/angle stays the same when updating the figure        
     return fig, log
 
@@ -328,7 +331,7 @@ def reset_seed(nclicks, seed):
     
     for i in range(height*length*width):
         if random.random() < p:
-            removed_nodes.add(i)
+            removed_nodes[i] = True
             G.handle_measurements(i, measurementChoice)
             log.append(f"{i}, {measurementChoice}; ")
             log.append(html.Br())
@@ -351,7 +354,7 @@ def load_graph_from_string(n_clicks, input_string):
     result = process_string(input_string)
 
     for i, measurementChoice in result:
-        removed_nodes.add(i)
+        removed_nodes[i] = True
         G.handle_measurements(i, measurementChoice)
         log.append(f"{i}, {measurementChoice}; ")
         log.append(html.Br())
@@ -400,7 +403,7 @@ def undo_move(n_clicks):
         undo = move_list.pop(-1)
         for move in move_list:
             i, measurementChoice = move
-            removed_nodes.add(i)
+            removed_nodes[i] = True
             G.handle_measurements(i, measurementChoice)
             log.append(f"{i}, {measurementChoice}; ")
             log.append(html.Br())
@@ -437,11 +440,11 @@ def algorithm1(nclicks):
             for x in range(G.shape[0]):
                 if ((x + xoffset) % 2 == z % 2) and ((y + yoffset) % 2 == z % 2):
                     i = G.get_node_index(x, y, z)
-                    if i not in removed_nodes:
+                    if removed_nodes[i] == False:
                         G.handle_measurements(i, 'Z')
                         log.append(f"{i}, Z; ")
                         log.append(html.Br())
-                        removed_nodes.add(i)
+                        removed_nodes[i] = True
                         move_list.append([i, 'Z']) 
     
     global cubes, n_cubes
@@ -493,9 +496,9 @@ def findlattice(nclicks):
     Input('alg2', 'n_clicks'),
     prevent_initial_call=True)
 def algorithm2(nclicks):
-    global lattice, lattice_edges
-
-    connected_cubes = D.findconnectedlattice(cubes)
+    global lattice, lattice_edges, connected_cubes
+    if connected_cubes is None:
+        connected_cubes = D.findconnectedlattice(cubes)
     for i in connected_cubes:
         print(i, len(connected_cubes))
     click_number = nclicks % (len(connected_cubes))

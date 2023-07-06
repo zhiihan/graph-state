@@ -86,14 +86,16 @@ class Holes:
                     if not ((x_diff[0] == 2) or (x_diff[1] == 2) or (x_diff[2] == 2)):
                         self.graph.add_edge(i, j)
     
-    def findlattice(self, removed_nodes, xoffset = 0, yoffset = 0):
+    def findlattice(self, removed_nodes, xoffset = 0, yoffset = 0, max_scale = 1):
         """
         Find a raussendorf lattice.
 
         Returns: cubes: a list containing a cube:
 
-            cube: np.array with shape (18, 4) containing the (x, y, z, scale)
+            cube: np.array with shape (19, 3) containing the (x, y, z, scale)
+            at [0, :] contains the center of the cube
 
+            n_cubes = the number of cubes found per dimension
         
         """
         
@@ -121,16 +123,15 @@ class Holes:
         centers = [np.array([x, y, z]) for z in range(self.shape[2]) for y in range(self.shape[1]) for x in range(self.shape[0])
                 if ((x + xoffset) % 2 == z % 2) and ((y + yoffset) % 2 == z % 2)]
 
-        cubes_scales = np.zeros((self.shape[0]//2))
-        cube_centers = []
+        n_cubes = np.zeros((self.shape[0]//2))
 
-        while scale < 2:
+        while scale <= max_scale:
             for c in centers:
                 for cube_vec in self.cube:
                     arr = c + cube_vec*scale
                     index = get_node_index(*arr, shape=self.shape)
                     #filter out nodes that are measured
-                    if (index in removed_nodes):
+                    if removed_nodes[index]:
                         break
                     #filter out boundary cases
                     if np.any((arr < 0) | (arr >= self.shape[0])):
@@ -147,75 +148,12 @@ class Holes:
                     for i, cube_vec in enumerate(self.cube):
                         cube[i+1, :3] = c + cube_vec*scale
                         #cube[i,  3] = scale 
-                    cubes_scales[scale-1] += 1
+                    n_cubes[scale-1] += 1
                     cubes.append(cube)
             scale += 1
     
-        return cubes, cubes_scales
-    
+        return cubes, n_cubes
 
-    def findlatticefast(self, removed_nodes, p, xoffset = 0, yoffset = 0):
-        """
-        Find a raussendorf lattice.
-        """
-        
-        self.cube = [np.array([0, -1, -1]),
-                np.array([-1, 0, -1]),
-                np.array([0, 0, -1]),
-                np.array([0, 1, -1]),
-                np.array([1, 0, -1]),
-                np.array([-1, -1, 0]),
-                np.array([0, -1, 0]),
-                np.array([-1, 0, 0]),
-                np.array([-1, 1, 0]),
-                np.array([0, 1, 0]),
-                np.array([1, 1, 0]),
-                np.array([1, 0, 0]),
-                np.array([1, -1, 0]),
-                np.array([0, -1, 1]),
-                np.array([-1, 0, 1]),
-                np.array([0, 0, 1]),
-                np.array([1, 0, 1]),
-                np.array([0, 1, 1])]
-        
-        scale = 1
-        centers = [np.array([x, y, z]) for z in range(self.shape[2]) for y in range(self.shape[1]) for x in range(self.shape[0])
-                if ((x + xoffset) % 2 == z % 2) and ((y + yoffset) % 2 == z % 2)]
-        cubes_scales = np.zeros(5, dtype=int)
-
-        
-        #removed_nodes_set = { index:(True if (index in removed_nodes) else False) for index in range(self.shape[0]*self.shape[1]*self.shape[2])}
-        t = 0
-         
-        time_delta = time.time()
-        cubes = []
-        while scale < 2:
-            t = 0
-            for c in centers:
-                for cube_vec in self.cube:
-                    arr = c + cube_vec*scale # Compute a coordinate
-                    index = get_node_index(*arr, shape=self.shape)
-                    #filter out boundary cases
-                    if np.any((arr <= 0) | (arr >= self.shape[0])):
-                        break
-                    #filter out nodes that are measured
-                    if (index in removed_nodes):
-                        break
-                else:
-                    #cube = np.empty((18, 3))
-                    #for i, cube_vec in enumerate(self.cube):
-                    #    cube[i, :3] = c + cube_vec*scale
-                    #append the size of the cube for now
-                    #cubes.append(cube)
-                    cubes_scales[scale - 1] += 1
-                if t % 100000 == 0:
-                    print(f"{np.sum(cubes_scales)}, found for p ={p}, {t/len(centers)*100}% finished, scale = {scale}")
-                    #print(time.time() - time_delta)
-                    time_delta = time.time()
-                t += 1
-            scale += 2
-            
-        return cubes_scales
 
     def findconnectedlattice(self, cubes):
         """

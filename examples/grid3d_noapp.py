@@ -54,7 +54,7 @@ def main(p):
 
     D, removed_nodes = reset_seed(p, seed, shape)
     xoffset, yoffset = algorithm1(D, removed_nodes, shape)
-    cube_scales = D.findlatticefast(removed_nodes, p, xoffset=xoffset, yoffset=yoffset)
+    cube_scales = D.findlattice(removed_nodes, xoffset=xoffset, yoffset=yoffset, p=p)
 
     end1loop = time.time()
     print((end1loop-start)/60, 'mins = 1 loop time ')
