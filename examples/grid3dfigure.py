@@ -496,7 +496,8 @@ def algorithm2(nclicks):
     global lattice, lattice_edges
 
     connected_cubes = D.findconnectedlattice(cubes)
-
+    for i in connected_cubes:
+        print(i, len(connected_cubes))
     click_number = nclicks % (len(connected_cubes))
     
     X = D.connected_cube_to_nodes(connected_cubes[click_number])

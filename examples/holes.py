@@ -133,7 +133,7 @@ class Holes:
                     if (index in removed_nodes):
                         break
                     #filter out boundary cases
-                    if np.any((arr <= 0) | (arr >= self.shape[0])):
+                    if np.any((arr < 0) | (arr >= self.shape[0])):
                         break
                 else:
                     
@@ -228,7 +228,8 @@ class Holes:
 
         for n in C.nodes():
             for n2 in C.nodes():
-                if taxicab_metric(n, n2) == 2:
+                length = taxicab_metric(n, n2)
+                if length == 2 or length == 3:
                     C.add_edge(n, n2)
         
         connected_cubes = [C.subgraph(c).copy() for c in nx.connected_components(C)]
