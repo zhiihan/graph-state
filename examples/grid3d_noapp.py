@@ -54,11 +54,13 @@ def main(p):
     data = np.zeros(samples)
     for i in range(samples):
         D, removed_nodes = reset_seed(p, seed, shape)
+        print('done building grid', f'p = {p}, samples={i}/{samples}')
         xoffset, yoffset = algorithm1(D, removed_nodes, shape)
         cubes, n_cubes = D.findlattice(removed_nodes, xoffset=xoffset, yoffset=yoffset)
+        print('latticies found', f'p = {p}, samples={i}/{samples}')
         connected_cubes = D.findconnectedlattice(cubes)
         end1loop = time.time()
-        print((end1loop-start)/60, 'mins = 1 loop time ')
+        print((end1loop-start)/60, 'mins elapsed', f'p = {p}, samples={i}/{samples}')
         data[i] = len(connected_cubes)
     return np.mean(data)
 
