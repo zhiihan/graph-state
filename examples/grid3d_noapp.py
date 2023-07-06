@@ -17,7 +17,7 @@ def reset_seed(p, seed, shape):
     for i in range(shape[0]*shape[1]*shape[2]):
         if random.random() < p:
             removed_nodes[i] = True
-            D.add_node(i, graph_add_node=False)
+            #D.add_node(i, graph_add_node=False)
         if i % 10000000 == 0:
             print(i/(shape[0]*shape[1]*shape[2])*100)
     return D, removed_nodes
@@ -51,15 +51,16 @@ def main(p):
     start = time.time()
 
     seed = 1
-
-    D, removed_nodes = reset_seed(p, seed, shape)
-    xoffset, yoffset = algorithm1(D, removed_nodes, shape)
-    print(removed_nodes)
-    cubes, n_cubes = D.findlattice(removed_nodes, xoffset=xoffset, yoffset=yoffset)
-
-    end1loop = time.time()
-    print((end1loop-start)/60, 'mins = 1 loop time ')
-    return n_cubes
+    data = np.zeros(samples)
+    for i in range(samples):
+        D, removed_nodes = reset_seed(p, seed, shape)
+        xoffset, yoffset = algorithm1(D, removed_nodes, shape)
+        cubes, n_cubes = D.findlattice(removed_nodes, xoffset=xoffset, yoffset=yoffset)
+        connected_cubes = D.findconnectedlattice(cubes)
+        end1loop = time.time()
+        print((end1loop-start)/60, 'mins = 1 loop time ')
+        data[i] = len(connected_cubes)
+    return np.mean(data)
 
 
 
@@ -67,10 +68,10 @@ import matplotlib.pyplot as plt
 import time
 import multiprocessing as mp
 
-cpu_cores = 1
+cpu_cores = 2
 
-shape = [20, 20, 20]
-samples = 1
+shape = [10, 10, 10]
+samples = 5
 n_cubes = np.empty((25, shape[0]//2, samples))
 p_vec = np.linspace(0.0, 0.25, 25)
 
@@ -87,30 +88,21 @@ if __name__ == "__main__":
     pool.close()
     pool.join()
 
-    n_cubes = np.vstack(results)
+    #n_cubes = np.vstack(results)
+    connected_cubes_len = np.array([results])
         
     print(time.time() - start)
 
-    np.save('data.npy', n_cubes)
-    print(n_cubes.shape, p_vec.shape)
+    np.save('data_connected_cubes.npy', connected_cubes_len)
+    print(connected_cubes_len.shape, p_vec.shape)
 
     plt.figure()
-    plt.scatter(p_vec, n_cubes[:, 0], label = f'shape = {shape}, cubesize={1}')
-    plt.scatter(p_vec, n_cubes[:, 0] + n_cubes[:, 2], label = f'shape = {shape}, cubesize={1, 3}')
+    plt.scatter(p_vec, connected_cubes_len, label = f'shape = {shape}, cubesize={1}')
     plt.xlabel('p')
-    plt.title('Number of Raussendorf Lattices vs. p')
+    plt.title('Number of connected subgraphs vs. p')
     plt.ylabel('N')
     plt.legend()
 
-    plt.savefig(f'probs{shape[0]}.png')
+    plt.savefig(f'connectedsubgraph{shape[0]}.png')
 
-    plt.figure()
-    plt.scatter(p_vec, n_cubes[:, 0], label = f'shape = {shape}, cubesize={1}')
-    plt.scatter(p_vec, n_cubes[:, 2], label = f'shape = {shape}, cubesize={3}')
-    plt.xlabel('p')
-    plt.title('Number of Raussendorf Lattices vs. p')
-    plt.ylabel('N')
-    plt.legend()
-
-    plt.savefig(f'probs{shape[0]}_separate.png')
 
