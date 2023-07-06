@@ -8,7 +8,7 @@ def reset_seed(p, seed, shape):
     Randomly measure qubits.
     """
     D = Holes(shape)
-    removed_nodes = set()
+    removed_nodes = np.zeros(shape[0]*shape[1]*shape[2], dtype=bool)
 
     random.seed(int(seed))
     # p is the probability of losing a qubit
@@ -16,7 +16,7 @@ def reset_seed(p, seed, shape):
     measurementChoice = 'Z'
     for i in range(shape[0]*shape[1]*shape[2]):
         if random.random() < p:
-            removed_nodes.add(i)
+            removed_nodes[i] = True
             D.add_node(i, graph_add_node=False)
         if i % 10000000 == 0:
             print(i/(shape[0]*shape[1]*shape[2])*100)
@@ -43,7 +43,7 @@ def algorithm1(D, removed_nodes, shape):
             for x in range(shape[0]):
                 if ((x + xoffset) % 2 == z % 2) and ((y + yoffset) % 2 == z % 2):
                     i = get_node_index(x, y, z, shape)
-                    removed_nodes.add(i) 
+                    removed_nodes[i] = True
     
     return xoffset, yoffset
 
@@ -54,11 +54,12 @@ def main(p):
 
     D, removed_nodes = reset_seed(p, seed, shape)
     xoffset, yoffset = algorithm1(D, removed_nodes, shape)
-    cube_scales = D.findlattice(removed_nodes, xoffset=xoffset, yoffset=yoffset, p=p)
+    print(removed_nodes)
+    cubes, n_cubes = D.findlattice(removed_nodes, xoffset=xoffset, yoffset=yoffset)
 
     end1loop = time.time()
     print((end1loop-start)/60, 'mins = 1 loop time ')
-    return cube_scales
+    return n_cubes
 
 
 
@@ -66,9 +67,9 @@ import matplotlib.pyplot as plt
 import time
 import multiprocessing as mp
 
-cpu_cores = 25
+cpu_cores = 1
 
-shape = [1000, 1000, 1000]
+shape = [20, 20, 20]
 samples = 1
 n_cubes = np.empty((25, shape[0]//2, samples))
 p_vec = np.linspace(0.0, 0.25, 25)

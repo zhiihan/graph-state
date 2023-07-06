@@ -130,14 +130,14 @@ class Holes:
                 for cube_vec in self.cube:
                     arr = c + cube_vec*scale
                     index = get_node_index(*arr, shape=self.shape)
-                    #filter out nodes that are measured
-                    if removed_nodes[index]:
-                        break
                     #filter out boundary cases
                     if np.any((arr < 0) | (arr >= self.shape[0])):
                         break
+                    #filter out nodes that are measured
+                    if removed_nodes[index]:
+                        break
+
                 else:
-                    
                     cube = np.empty((19, 3))
                     """
                     Format:
