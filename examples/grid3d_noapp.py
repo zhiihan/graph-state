@@ -64,13 +64,17 @@ def main(input):
     xoffset, yoffset = algorithm1(D, removed_nodes, shape)
     cubes, n_cubes = D.findlattice(removed_nodes, xoffset=xoffset, yoffset=yoffset)
     print('latticies found', f'p = {p}, samples={seed}/{samples}')
-    connected_cubes = D.findconnectedlattice(cubes)
+    
+    #connected_cubes = D.findconnectedlattice(cubes)        
+    #with open(f'./data/cubes{p:.2f}sample{seed}', 'wb') as f:
+    #    pickle.dump(connected_cubes, f)
+    
+    largestcc = D.findmaxconnectedlattice(cubes)
+    with open(f'./data/cc{p:.2f}sample{seed}shape{shape[0]}', 'wb') as f:
+        pickle.dump(largestcc, f)
+
     end1loop = time.time()
     print((end1loop-start)/60, 'mins elapsed', f'p = {p}, samples={seed}/{samples}')
-        
-    with open(f'./data/cubes{p:.2f}sample{seed}', 'wb') as f:
-        pickle.dump(connected_cubes, f)
-
     return 
 
 
@@ -81,7 +85,7 @@ import multiprocessing as mp
 
 cpu_cores = 2
 
-shape = [10, 10, 10]
+shape = [20, 20, 20]
 samples = 5
 n_cubes = np.empty((25, shape[0]//2, samples))
 p_vec = np.linspace(0.0, 0.25, 25)

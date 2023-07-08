@@ -175,6 +175,28 @@ class Holes:
         connected_cubes = [C.subgraph(c).copy() for c in nx.connected_components(C)]
         return connected_cubes
     
+    def findmaxconnectedlattice(self, cubes):
+        """
+        Extract the data from the numpy array.
+
+        Returns: the graph of centers C
+        """
+        C = nx.Graph() # C is an object that contains all the linked centers
+        for c in cubes:
+            center = tuple(c[0, :])
+            C.add_node(center)
+
+        for n in C.nodes():
+            for n2 in C.nodes():
+                length = taxicab_metric(n, n2)
+                if length == 2 or length == 3:
+                    C.add_edge(n, n2)
+        try:
+            largest_cc = max(nx.connected_components(C), key=len)
+        except ValueError:
+            largest_cc = nx.Graph()
+        return largest_cc
+    
     def connected_cube_to_nodes(self, connected_cubes):
         X = nx.Graph() # X is the same object as C but it contains the actual verticies. 
         
