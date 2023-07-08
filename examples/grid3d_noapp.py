@@ -47,22 +47,31 @@ def algorithm1(D, removed_nodes, shape):
     
     return xoffset, yoffset
 
-def main(p):
+import pickle
+
+def main(input):
+    """
+    input = list containing [probability, seed] 
+    """
     start = time.time()
 
-    seed = 1
+    p, seed = input
+    
     data = np.zeros(samples)
-    for i in range(samples):
-        D, removed_nodes = reset_seed(p, seed, shape)
-        print('done building grid', f'p = {p}, samples={i}/{samples}')
-        xoffset, yoffset = algorithm1(D, removed_nodes, shape)
-        cubes, n_cubes = D.findlattice(removed_nodes, xoffset=xoffset, yoffset=yoffset)
-        print('latticies found', f'p = {p}, samples={i}/{samples}')
-        connected_cubes = D.findconnectedlattice(cubes)
-        end1loop = time.time()
-        print((end1loop-start)/60, 'mins elapsed', f'p = {p}, samples={i}/{samples}')
-        data[i] = len(connected_cubes)
-    return np.mean(data)
+
+    D, removed_nodes = reset_seed(p, seed, shape)
+    print('done building grid', f'p = {p}, samples={seed}/{samples}')
+    xoffset, yoffset = algorithm1(D, removed_nodes, shape)
+    cubes, n_cubes = D.findlattice(removed_nodes, xoffset=xoffset, yoffset=yoffset)
+    print('latticies found', f'p = {p}, samples={seed}/{samples}')
+    connected_cubes = D.findconnectedlattice(cubes)
+    end1loop = time.time()
+    print((end1loop-start)/60, 'mins elapsed', f'p = {p}, samples={seed}/{samples}')
+        
+    with open(f'./data/cubes{p:.2f}sample{seed}', 'wb') as f:
+        pickle.dump(connected_cubes, f)
+
+    return 
 
 
 
@@ -77,24 +86,20 @@ samples = 5
 n_cubes = np.empty((25, shape[0]//2, samples))
 p_vec = np.linspace(0.0, 0.25, 25)
 
-def main2(p):
-    print(p)
-    time.sleep(0.5)
-    return np.array([p, 0])
-
+input_vec = [(p, s) for p in p_vec for s in range(samples)]
 
 if __name__ == "__main__":
     start = time.time()
     pool = mp.Pool(processes=cpu_cores)
-    results = pool.map(main, p_vec)
+    results = pool.map(main, input_vec)
     pool.close()
     pool.join()
 
     #n_cubes = np.vstack(results)
     connected_cubes_len = np.array([results])
         
-    print(time.time() - start)
-
+    print((time.time() - start)/60)
+    """
     np.save('data_connected_cubes.npy', connected_cubes_len)
     print(connected_cubes_len.shape, p_vec.shape)
 
@@ -106,5 +111,5 @@ if __name__ == "__main__":
     plt.legend()
 
     plt.savefig(f'connectedsubgraph{shape[0]}.png')
-
+    """
 

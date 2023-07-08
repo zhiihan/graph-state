@@ -158,6 +158,8 @@ class Holes:
     def findconnectedlattice(self, cubes):
         """
         Extract the data from the numpy array.
+
+        Returns: the graph of centers C
         """
         C = nx.Graph() # C is an object that contains all the linked centers
         for c in cubes:
