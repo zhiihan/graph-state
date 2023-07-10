@@ -161,18 +161,20 @@ class Holes:
 
         Returns: the graph of centers C
         """
-        C = nx.Graph() # C is an object that contains all the linked centers
+        import rustworkx as rx
+        C = rx.PyGraph() # C is an object that contains all the linked centers
         for c in cubes:
             center = tuple(c[0, :])
             C.add_node(center)
 
-        for n in C.nodes():
-            for n2 in C.nodes():
-                length = taxicab_metric(n, n2)
+        for n in C.node_indexes():
+            for n2 in C.node_indexes():
+                length = taxicab_metric(C[n], C[n2])
                 if length == 2 or length == 3:
-                    C.add_edge(n, n2)
+                    C.add_edge(n, n2, None)
         
-        connected_cubes = [C.subgraph(c).copy() for c in nx.connected_components(C)]
+        #connected_cubes = [C.subgraph(c).copy() for c in nx.connected_components(C)]
+        connected_cubes = rx.connected_components(C)
         return connected_cubes
     
     def findmaxconnectedlattice(self, cubes):
@@ -209,3 +211,23 @@ class Holes:
                 if taxicab_metric(n, n2) == 1:
                     X.add_edge(n, n2)
         return X
+    
+    def findconnectedlatticenx(self, cubes):
+            """
+            Extract the data from the numpy array.
+
+            Returns: the graph of centers C
+            """
+            C = nx.Graph() # C is an object that contains all the linked centers
+            for c in cubes:
+                center = tuple(c[0, :])
+                C.add_node(center)
+
+            for n in C.nodes():
+                for n2 in C.nodes():
+                    length = taxicab_metric(n, n2)
+                    if length == 2 or length == 3:
+                        C.add_edge(n, n2)
+            
+            connected_cubes = [C.subgraph(c).copy() for c in nx.connected_components(C)]
+            return connected_cubes
