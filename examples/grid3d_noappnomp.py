@@ -81,9 +81,6 @@ def main(input):
 
 import matplotlib.pyplot as plt
 import time
-import multiprocessing as mp
-
-cpu_cores = 2
 
 shape = [100, 100, 100]
 samples = 1
@@ -92,28 +89,8 @@ p_vec = np.linspace(0.0, 0.25, 25)
 
 input_vec = [(p, s) for p in p_vec for s in range(samples)]
 
-if __name__ == "__main__":
-    start = time.time()
-    pool = mp.Pool(processes=cpu_cores)
-    results = pool.map(main, input_vec)
-    pool.close()
-    pool.join()
-
-    #n_cubes = np.vstack(results)
-    connected_cubes_len = np.array([results])
-        
+results = []
+start = time.time()
+for i in input_vec:
+    results.append(main(i))
     print((time.time() - start)/60)
-    """
-    np.save('data_connected_cubes.npy', connected_cubes_len)
-    print(connected_cubes_len.shape, p_vec.shape)
-
-    plt.figure()
-    plt.scatter(p_vec, connected_cubes_len, label = f'shape = {shape}, cubesize={1}')
-    plt.xlabel('p')
-    plt.title('Number of connected subgraphs vs. p')
-    plt.ylabel('N')
-    plt.legend()
-
-    plt.savefig(f'connectedsubgraph{shape[0]}.png')
-    """
-

@@ -17,7 +17,7 @@ height = 11
 width = 11
 length = 11
 shape = [height, length, width]
-p = 0.20
+p = 0.08
 global_seed = 1
 xoffset = 0
 yoffset = 0
@@ -498,7 +498,7 @@ def findlattice(nclicks):
 def algorithm2(nclicks):
     global lattice, lattice_edges, connected_cubes
     if connected_cubes is None:
-        connected_cubes = D.findconnectedlattice(cubes)
+        connected_cubes = D.findconnectedlatticenx(cubes)
     for i in connected_cubes:
         print(i, len(connected_cubes))
     click_number = nclicks % (len(connected_cubes))

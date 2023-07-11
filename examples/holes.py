@@ -2,6 +2,7 @@ import networkx as nx
 import numpy as np
 from helperfunctions import *
 import time
+import networkit as nk
 
 class Holes:
     def __init__(self, shape):
@@ -154,28 +155,29 @@ class Holes:
     
         return cubes, n_cubes
 
-
-    def findconnectedlattice(self, cubes):
+    def findconnectedlatticenk(self, cubes):
         """
         Extract the data from the numpy array.
 
         Returns: the graph of centers C
         """
-        import rustworkx as rx
-        C = rx.PyGraph() # C is an object that contains all the linked centers
-        for c in cubes:
-            center = tuple(c[0, :])
-            C.add_node(center)
 
-        for n in C.node_indexes():
-            for n2 in C.node_indexes():
-                length = taxicab_metric(C[n], C[n2])
-                if length == 2 or length == 3:
-                    C.add_edge(n, n2, None)
+        self.centers_dict = {i:tuple(c[0, :]) for i, c in enumerate(cubes)}
         
+        C = nk.Graph(len(self.centers_dict)) # C is an object that contains all the linked centers
+
+        for i, n in self.centers_dict.items():
+            for i2, n2 in self.centers_dict.items():
+                length = taxicab_metric(n, n2)
+                if length == 2 or length == 3:
+                    C.addEdge(i, i2)
         #connected_cubes = [C.subgraph(c).copy() for c in nx.connected_components(C)]
-        connected_cubes = rx.connected_components(C)
-        return connected_cubes
+        cc = nk.components.ConnectedComponents(C)
+        cc.run()
+        largest_cube = cc.extractLargestConnectedComponent(C, True)
+        for u in largest_cube.iterNodes():
+            print(self.centers_dict[u])
+        return largest_cube
     
     def findmaxconnectedlattice(self, cubes):
         """
@@ -213,21 +215,21 @@ class Holes:
         return X
     
     def findconnectedlatticenx(self, cubes):
-            """
-            Extract the data from the numpy array.
+        """
+        Extract the data from the numpy array.
 
-            Returns: the graph of centers C
-            """
-            C = nx.Graph() # C is an object that contains all the linked centers
-            for c in cubes:
-                center = tuple(c[0, :])
-                C.add_node(center)
+        Returns: the graph of centers C
+        """
+        C = nx.Graph() # C is an object that contains all the linked centers
+        for c in cubes:
+            center = tuple(c[0, :])
+            C.add_node(center)
 
-            for n in C.nodes():
-                for n2 in C.nodes():
-                    length = taxicab_metric(n, n2)
-                    if length == 2 or length == 3:
-                        C.add_edge(n, n2)
-            
-            connected_cubes = [C.subgraph(c).copy() for c in nx.connected_components(C)]
-            return connected_cubes
+        for n in C.nodes():
+            for n2 in C.nodes():
+                length = taxicab_metric(n, n2)
+                if length == 2 or length == 3:
+                    C.add_edge(n, n2)
+        
+        connected_cubes = [C.subgraph(c).copy() for c in nx.connected_components(C)]
+        return connected_cubes
