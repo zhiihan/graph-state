@@ -67,12 +67,15 @@ def main(input):
     
     C = D.build_centers_graph(cubes)
     
+    #with open(f'./data/ncubes{p:.4f}shape{shape[0]}sample{seed}', 'wb') as f:
+    #    pickle.dump(n_cubes, f)
+
     #connected_cubes = D.findconnectedlattice(C)      
-    #with open(f'./data/cubes{p:.2f}sample{seed}', 'wb') as f:
+    #with open(f'./data/cubes{p:.4f}shape{shape[0]}sample{seed}', 'wb') as f:
     #    pickle.dump(connected_cubes, f)
     
     largestcc = D.findmaxconnectedlattice(C)
-    #with open(f'./data/cc{p:.2f}sample{seed}shape{shape[0]}', 'wb') as f:
+    #with open(f'./data/cc{p:.4f}shape{shape[0]}sample{seed}', 'wb') as f:
     #    pickle.dump(largestcc, f)
 
     end1loop = time.time()
