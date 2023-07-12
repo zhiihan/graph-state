@@ -13,16 +13,15 @@ import networkx as nx
 from helperfunctions import *
 
 # Global constants
-height = 4
-width = 4
-length = 4
+height = 5
+width = 5
+length = 5
 shape = [height, length, width]
-p = 0.01
+p = 0.02
 global_seed = 1
 
 G = Grid([height, width, length]) # qubits
 D = Holes([height, width, length]) # holes
-D.add_node(25)
 cubes = None
 lattice = None
 lattice_edges = None
@@ -433,8 +432,10 @@ def algorithm1(nclicks):
                     hole_locations[xoffset+yoffset*2] += 1
     
     print(hole_locations)
+    
     xoffset = np.argmax(hole_locations) % 2
     yoffset = np.argmax(hole_locations) // 2
+    
 
     print(f"xoffset, yoffset = {(xoffset, yoffset)}")
 
@@ -451,7 +452,7 @@ def algorithm1(nclicks):
                         move_list.append([i, 'Z']) 
     
     global cubes, n_cubes
-    cubes, n_cubes = D.findlattice(removed_nodes, xoffset=xoffset, yoffset=yoffset)
+    cubes, n_cubes = D.findlattice(removed_nodes, xoffset, yoffset)
     print(f'{n_cubes[0]} of size 1 Raussendorf Latticies found for p = {p}, shape = {shape}')
 
     print(f'cubes of size {n_cubes} found')
@@ -471,7 +472,7 @@ def findlattice(nclicks):
     global cubes, n_cubes, lattice
 
     if n_cubes is None:
-        cubes, n_cubes =  D.findlattice(removed_nodes, xoffset=xoffset, yoffset=yoffset)
+        cubes, n_cubes =  D.findlattice(removed_nodes, xoffset, yoffset)
     #assert len(defect_box) == len(measurements_list)
 
     print(f'{len(cubes)} Raussendorf Latticies found for p = {p}, shape = {shape}')

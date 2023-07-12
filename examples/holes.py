@@ -87,7 +87,7 @@ class Holes:
                     if not ((x_diff[0] == 2) or (x_diff[1] == 2) or (x_diff[2] == 2)):
                         self.graph.add_edge(i, j)
     
-    def findlattice(self, removed_nodes, xoffset = 0, yoffset = 0, max_scale = 1):
+    def findlattice(self, removed_nodes, xoffset, yoffset, max_scale = 1):
         """
         Find a raussendorf lattice.
 
