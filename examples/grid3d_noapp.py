@@ -35,8 +35,8 @@ def algorithm1(D, removed_nodes, shape):
                 if ((nx + xoffset) % 2 == nz % 2) and ((ny + yoffset) % 2 == nz % 2):
                     hole_locations[xoffset+yoffset*2] += 1
     
-    xoffset = np.argmax(hole_locations) // 2
-    yoffset = np.argmax(hole_locations) % 2
+    xoffset = np.argmax(hole_locations) % 2
+    yoffset = np.argmax(hole_locations) // 2
 
     for z in range(shape[2]):
         for y in range(shape[1]):
@@ -62,7 +62,7 @@ def main(input):
     D, removed_nodes = reset_seed(p, seed, shape)
     print('done building grid', f'p = {p}, samples={seed}/{samples}')
     xoffset, yoffset = algorithm1(D, removed_nodes, shape)
-    cubes, n_cubes = D.findlattice(removed_nodes, xoffset=xoffset, yoffset=yoffset)
+    cubes, n_cubes = D.findlattice(removed_nodes, xoffset, yoffset)
     print('latticies found', f'p = {p}, samples={seed}/{samples}')
     
     C = D.build_centers_graph(cubes)
