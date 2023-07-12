@@ -13,17 +13,16 @@ import networkx as nx
 from helperfunctions import *
 
 # Global constants
-height = 11
-width = 11
-length = 11
+height = 4
+width = 4
+length = 4
 shape = [height, length, width]
-p = 0.08
+p = 0.01
 global_seed = 1
-xoffset = 0
-yoffset = 0
 
 G = Grid([height, width, length]) # qubits
 D = Holes([height, width, length]) # holes
+D.add_node(25)
 cubes = None
 lattice = None
 lattice_edges = None
@@ -323,8 +322,12 @@ def reset_seed(nclicks, seed):
     D = Holes(shape)
     if seed is not None:
         random.seed(int(seed))
+        print(f'Loaded seed : {seed}')
     elif global_seed is not None:
         random.seed(int(global_seed))
+        print(f'Loaded seed : {global_seed}')
+    else:
+        print(f'Loaded seed : {seed}')
     # p is the probability of losing a qubit
 
     measurementChoice = 'Z'
@@ -338,7 +341,6 @@ def reset_seed(nclicks, seed):
             move_list.append([i, measurementChoice])
             D.add_node(i)
     D.add_edges()
-    print(f'Loaded seed : {seed}')
     return log, 1
 
 @app.callback(
@@ -430,8 +432,9 @@ def algorithm1(nclicks):
                 if ((nx + xoffset) % 2 == nz % 2) and ((ny + yoffset) % 2 == nz % 2):
                     hole_locations[xoffset+yoffset*2] += 1
     
-    xoffset = np.argmax(hole_locations) // 2
-    yoffset = np.argmax(hole_locations) % 2
+    print(hole_locations)
+    xoffset = np.argmax(hole_locations) % 2
+    yoffset = np.argmax(hole_locations) // 2
 
     print(f"xoffset, yoffset = {(xoffset, yoffset)}")
 
@@ -498,7 +501,8 @@ def findlattice(nclicks):
 def algorithm2(nclicks):
     global lattice, lattice_edges, connected_cubes
     if connected_cubes is None:
-        connected_cubes = D.findconnectedlatticenx(cubes)
+        C = D.build_centers_graph(cubes)
+        connected_cubes = D.findconnectedlattice(C)
     for i in connected_cubes:
         print(i, len(connected_cubes))
     click_number = nclicks % (len(connected_cubes))
