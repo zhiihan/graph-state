@@ -65,11 +65,13 @@ def main(input):
     cubes, n_cubes = D.findlattice(removed_nodes, xoffset=xoffset, yoffset=yoffset)
     print('latticies found', f'p = {p}, samples={seed}/{samples}')
     
-    connected_cubes = D.findconnectedlatticenk(cubes)        
+    C = D.build_centers_graph(cubes)
+    
+    #connected_cubes = D.findconnectedlattice(C)      
     #with open(f'./data/cubes{p:.2f}sample{seed}', 'wb') as f:
     #    pickle.dump(connected_cubes, f)
     
-    #largestcc = D.findmaxconnectedlattice(cubes)
+    largestcc = D.findmaxconnectedlattice(C)
     #with open(f'./data/cc{p:.2f}sample{seed}shape{shape[0]}', 'wb') as f:
     #    pickle.dump(largestcc, f)
 
@@ -85,7 +87,7 @@ import multiprocessing as mp
 
 cpu_cores = 2
 
-shape = [100, 100, 100]
+shape = [10, 10, 10]
 samples = 1
 n_cubes = np.empty((25, shape[0]//2, samples))
 p_vec = np.linspace(0.0, 0.25, 25)
