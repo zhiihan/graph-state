@@ -13,9 +13,9 @@ import networkx as nx
 from helperfunctions import *
 
 # Global constants
-xmax = 5
-ymax = 3
-zmax = 3
+xmax = 4
+ymax = 4
+zmax = 7
 shape = [xmax, ymax, zmax]
 p = 0.05
 global_seed = 2
@@ -420,30 +420,32 @@ def undo_move(n_clicks):
     prevent_initial_call=True)
 def algorithm1(nclicks):
     holes = D.graph.nodes
-    hole_locations = np.zeros(4)
-    global xoffset, yoffset
+    hole_locations = np.zeros(8)
+    global xoffset, yoffset, zoffset
 
     #counting where the holes are
     for h in holes:
-        nx, ny, nz = get_node_coords(h, shape)
-        for yoffset in range(2):
-            for xoffset in range(2):
-                if ((nx + xoffset) % 2 == nz % 2) and ((ny + yoffset) % 2 == nz % 2):
-                    hole_locations[xoffset+yoffset*2] += 1
+        x, y, z = get_node_coords(h, shape)
+        for zoffset in range(2):
+            for yoffset in range(2):
+                for xoffset in range(2):
+                    if ((x + xoffset) % 2 == (z + zoffset) % 2) and ((y + yoffset) % 2 == (z + zoffset) % 2):
+                        hole_locations[xoffset+yoffset*2 + zoffset*4] += 1
     
     print(hole_locations)
     
     xoffset = np.argmax(hole_locations) % 2
     yoffset = np.argmax(hole_locations) // 2
+    zoffset = np.argmax(hole_locations) // 4
     
 
-    print(f"xoffset, yoffset = {(xoffset, yoffset)}")
+    print(f"xoffset, yoffset, zoffset = {(xoffset, yoffset, zoffset)}")
 
-    for z in range(G.shape[2]):
-        for y in range(G.shape[1]):
-            for x in range(G.shape[0]):
-                if ((x + xoffset) % 2 == z % 2) and ((y + yoffset) % 2 == z % 2):
-                    i = G.get_node_index(x, y, z)
+    for z in range(shape[2]):
+        for y in range(shape[1]):
+            for x in range(shape[0]):
+                if ((x + xoffset) % 2 == (z + zoffset) % 2) and ((y + yoffset) % 2 == (z + zoffset) % 2):
+                    i = get_node_index(x, y, z, shape)
                     if removed_nodes[i] == False:
                         G.handle_measurements(i, 'Z')
                         log.append(f"{i}, Z; ")
@@ -452,7 +454,7 @@ def algorithm1(nclicks):
                         move_list.append([i, 'Z']) 
     
     global cubes, n_cubes
-    cubes, n_cubes = D.findlattice(removed_nodes, xoffset, yoffset)
+    cubes, n_cubes = D.findlattice(removed_nodes, xoffset, yoffset, zoffset)
     print(f'{n_cubes[0]} of size 1 Raussendorf Latticies found for p = {p}, shape = {shape}')
 
     print(f'cubes of size {n_cubes} found')
@@ -472,7 +474,7 @@ def findlattice(nclicks):
     global cubes, n_cubes, lattice
 
     if n_cubes is None:
-        cubes, n_cubes =  D.findlattice(removed_nodes, xoffset, yoffset)
+        cubes, n_cubes =  D.findlattice(removed_nodes, xoffset, yoffset, zoffset)
     #assert len(defect_box) == len(measurements_list)
 
     print(f'{len(cubes)} Raussendorf Latticies found for p = {p}, shape = {shape}')

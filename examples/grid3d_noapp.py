@@ -25,27 +25,29 @@ def reset_seed(p, seed, shape):
 
 def algorithm1(D, removed_nodes, shape):
     holes = D.graph.nodes
-    hole_locations = np.zeros(4)
+    hole_locations = np.zeros(8)
 
     #counting where the holes are
     for h in holes:
-        nx, ny, nz = get_node_coords(h, shape)
-        for yoffset in range(2):
-            for xoffset in range(2):
-                if ((nx + xoffset) % 2 == nz % 2) and ((ny + yoffset) % 2 == nz % 2):
-                    hole_locations[xoffset+yoffset*2] += 1
+        x, y, z = get_node_coords(h, shape)
+        for zoffset in range(2):
+            for yoffset in range(2):
+                for xoffset in range(2):
+                    if ((x + xoffset) % 2 == (z + zoffset) % 2) and ((y + yoffset) % 2 == (z + zoffset) % 2):
+                        hole_locations[xoffset+yoffset*2+zoffset*4] += 1
     
     xoffset = np.argmax(hole_locations) % 2
     yoffset = np.argmax(hole_locations) // 2
+    zoffset = np.argmax(hole_locations) // 4
 
     for z in range(shape[2]):
         for y in range(shape[1]):
             for x in range(shape[0]):
-                if ((x + xoffset) % 2 == z % 2) and ((y + yoffset) % 2 == z % 2):
+                if ((x + xoffset) % 2 == (z + zoffset) % 2) and ((y + yoffset) % 2 == (z + zoffset) % 2):
                     i = get_node_index(x, y, z, shape)
                     removed_nodes[i] = True
     
-    return xoffset, yoffset
+    return xoffset, yoffset, zoffset
 
 import pickle
 

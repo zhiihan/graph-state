@@ -87,7 +87,7 @@ class Holes:
                     if not ((x_diff[0] == 2) or (x_diff[1] == 2) or (x_diff[2] == 2)):
                         self.graph.add_edge(i, j)
     
-    def findlattice(self, removed_nodes, xoffset, yoffset, max_scale = 1):
+    def findlattice(self, removed_nodes, xoffset, yoffset, zoffset, max_scale = 1):
         """
         Find a raussendorf lattice.
 
@@ -103,7 +103,7 @@ class Holes:
         scale = 1
         cubes = []
         centers = [np.array([x, y, z]) for z in range(self.shape[2]) for y in range(self.shape[1]) for x in range(self.shape[0])
-                if ((x + xoffset) % 2 == z % 2) and ((y + yoffset) % 2 == z % 2)]
+                if ((x + xoffset) % 2 == (z + zoffset) % 2) and ((y + yoffset) % 2 == (z + zoffset) % 2)]
 
         n_cubes = np.zeros((self.shape[0]//2))
 
@@ -113,7 +113,7 @@ class Holes:
                     arr = c + cube_vec*scale
                     index = get_node_index(*arr, shape=self.shape)
                     #filter out boundary cases
-                    if np.any((arr < 0) | (arr >= self.shape[0])):
+                    if np.any((arr < 0) | np.greater_equal(arr, self.shape)):
                         break
                     #filter out nodes that are measured
                     if removed_nodes[index]:
