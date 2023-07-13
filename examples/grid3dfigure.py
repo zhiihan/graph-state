@@ -13,20 +13,20 @@ import networkx as nx
 from helperfunctions import *
 
 # Global constants
-height = 5
-width = 5
-length = 5
-shape = [height, length, width]
-p = 0.02
-global_seed = 1
+xmax = 5
+ymax = 3
+zmax = 3
+shape = [xmax, ymax, zmax]
+p = 0.05
+global_seed = 2
 
-G = Grid([height, width, length]) # qubits
-D = Holes([height, width, length]) # holes
+G = Grid([xmax, ymax, zmax]) # qubits
+D = Holes([xmax, ymax, zmax]) # holes
 cubes = None
 lattice = None
 lattice_edges = None
 connected_cubes = None
-removed_nodes = np.zeros(height*width*length, dtype=bool)
+removed_nodes = np.zeros(xmax*ymax*zmax, dtype=bool)
 log = [] #html version of move_list
 move_list = [] #local variable containing moves
 camera_state = {
@@ -248,7 +248,7 @@ def display_click_data(clickData, measurementChoice, clickLog):
     if point["curveNumber"] > 0 or 'x' not in point:
         return dash.no_update, dash.no_update
     else: 
-        i = G.get_node_index(point['x'], point['y'], point['z'])
+        i = get_node_index(point['x'], point['y'], point['z'], shape)
         # Update the plot based on the node clicked
         if removed_nodes[i] == False :
             removed_nodes[i] = True
@@ -292,7 +292,7 @@ def reset_grid(input, move_list_reset = True):
     global G, removed_nodes, log, move_list, lattice, lattice_edges, connected_cubes
     
     G = Grid(shape)
-    removed_nodes = np.zeros(height*width*length, dtype=bool)
+    removed_nodes = np.zeros(xmax*ymax*zmax, dtype=bool)
     fig = update_plot(G)
     log = []
     if move_list_reset:
@@ -331,7 +331,7 @@ def reset_seed(nclicks, seed):
 
     measurementChoice = 'Z'
     
-    for i in range(height*length*width):
+    for i in range(xmax*ymax*zmax):
         if random.random() < p:
             removed_nodes[i] = True
             G.handle_measurements(i, measurementChoice)

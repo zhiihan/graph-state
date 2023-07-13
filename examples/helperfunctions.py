@@ -1,7 +1,7 @@
 import numpy as np
 
 def get_node_index(x, y, z, shape):
-    return x + y * shape[1] + z * shape[1] * shape[2]
+    return x + y * shape[0] + z * shape[1] * shape[0]
 
 def get_node_coords(i, shape):
     index_x = i % shape[0]
