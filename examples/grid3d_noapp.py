@@ -63,8 +63,8 @@ def main(input):
 
     D, removed_nodes = reset_seed(p, seed, shape)
     print('done building grid', f'p = {p}, samples={seed}/{samples}')
-    xoffset, yoffset = algorithm1(D, removed_nodes, shape)
-    cubes, n_cubes = D.findlattice(removed_nodes, xoffset, yoffset)
+    xoffset, yoffset, zoffset = algorithm1(D, removed_nodes, shape)
+    cubes, n_cubes = D.findlattice(removed_nodes, xoffset, yoffset, zoffset)
     print('latticies found', f'p = {p}, samples={seed}/{samples}')
     
     C = D.build_centers_graph(cubes)
