@@ -13,12 +13,12 @@ import networkx as nx
 from helperfunctions import *
 
 # Global constants
-xmax = 4
-ymax = 4
-zmax = 7
+xmax = 7
+ymax = 8
+zmax = 6
 shape = [xmax, ymax, zmax]
 p = 0.05
-global_seed = 2
+global_seed = None
 
 G = Grid([xmax, ymax, zmax]) # qubits
 D = Holes([xmax, ymax, zmax]) # holes
@@ -484,9 +484,9 @@ def findlattice(nclicks):
 
     if len(cubes) > 0:
         lattice = go.Scatter3d(
-        x=cubes[click_number][:, 0],
-        y=cubes[click_number][:, 1],
-        z=cubes[click_number][:, 2],
+        x=cubes[click_number][1:, 0],
+        y=cubes[click_number][1:, 1],
+        z=cubes[click_number][1:, 2],
         mode='markers',
         line=dict(color='blue', width=2),
         hoverinfo='none'
@@ -508,30 +508,30 @@ def algorithm2(nclicks):
         connected_cubes = D.findconnectedlattice(C)
     for i in connected_cubes:
         print(i, len(connected_cubes))
-    click_number = nclicks % (len(connected_cubes))
     
-    X = D.connected_cube_to_nodes(connected_cubes[click_number])
+    if len(connected_cubes) > 0:
+        click_number = nclicks % (len(connected_cubes))
+        X = D.connected_cube_to_nodes(connected_cubes[click_number])
         
-    nodes, edges = nx_to_plot(X, shape=shape, index=False)
-    
-    
-    lattice = go.Scatter3d(
-    x=nodes[0],
-    y=nodes[1],
-    z=nodes[2],
-    mode='markers',
-    line=dict(color='blue', width=2),
-    hoverinfo='none'
-    )
+        nodes, edges = nx_to_plot(X, shape=shape, index=False)
 
-    lattice_edges = go.Scatter3d(
-    x=edges[0],
-    y=edges[1],
-    z=edges[2],
-    mode='lines',
-    line=dict(color='blue', width=2),
-    hoverinfo='none'
-    )
+        lattice = go.Scatter3d(
+        x=nodes[0],
+        y=nodes[1],
+        z=nodes[2],
+        mode='markers',
+        line=dict(color='blue', width=2),
+        hoverinfo='none'
+        )
+
+        lattice_edges = go.Scatter3d(
+        x=edges[0],
+        y=edges[1],
+        z=edges[2],
+        mode='lines',
+        line=dict(color='blue', width=2),
+        hoverinfo='none'
+        )
     
         
     return log, 2, 'Ran Algorithm 2'
