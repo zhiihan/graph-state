@@ -133,7 +133,8 @@ class Holes:
     def findmaxconnectedlattice(self, C): 
         """
         Returns the largest subgraph.
-        Input: Graph of centers C
+        Input: A connected cube: networkx Graph object that is a graph of centers
+        Each node is a tuple (x, y, z)
         """
         try:
             largest_cc = max(nx.connected_components(C), key=len)
@@ -141,15 +142,20 @@ class Holes:
             largest_cc = nx.Graph()
         return largest_cc
     
-    def connected_cube_to_nodes(self, connected_cubes):
+    def connected_cube_to_nodes(self, connected_cube):
+        """
+        Input: A connected cube: networkx Graph object that is a graph of centers
+        Each node is a tuple (x, y, z)
+        """
         X = nx.Graph() # X is the same object as C but it contains the actual verticies. 
         
-        for node in connected_cubes.nodes():
+        for node in connected_cube.nodes():
             for cube_vec in self.cube:
                 X.add_node(tuple(node + cube_vec))
         
-        for n in X.nodes():
-            for n2 in X.nodes():
+        nodes = list(X.nodes)
+        for index, n in enumerate(nodes):
+            for n2 in nodes[index:]:
                 if taxicab_metric(n, n2) == 1:
                     X.add_edge(n, n2)
         return X
@@ -158,6 +164,7 @@ class Holes:
         """
         Returns the largest subgraph.
         Input: Graph of centers C
+        C contains tuples of coordinates (x, y, z) which is the center of a unit cell.
         """
 
         connected_cubes = [C.subgraph(c).copy() for c in nx.connected_components(C)]

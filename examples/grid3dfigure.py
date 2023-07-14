@@ -318,7 +318,7 @@ def update_output(value):
     prevent_initial_call=True)
 def reset_grid(input, xslider, yslider, zslider, move_list_reset = True):
     global G, removed_nodes, log, move_list, lattice, lattice_edges, connected_cubes
-    global shape, xmax, ymax, zmax
+    global shape, xmax, ymax, zmax, xoffset, yoffset, zoffset
 
     xmax = int(xslider)
     ymax = int(yslider)
@@ -336,6 +336,9 @@ def reset_grid(input, xslider, yslider, zslider, move_list_reset = True):
         lattice = None
         lattice_edges = None
         connected_cubes = None
+        xoffset = None
+        yoffset = None
+        zoffset = None
     # Make sure the view/angle stays the same when updating the figure        
     return fig, log, "Created grid of shape {}".format(shape)
 
@@ -508,9 +511,14 @@ def findlattice(nclicks):
     """
     Returns:
     """
-    global cubes, n_cubes, lattice
+    global cubes, n_cubes, lattice, lattice_edges
 
     try:
+        if xoffset == None:
+            # cubes, n_cubes is not defined and this is because we didnt compute the offsets.
+            ui = "FindLattice: Run algorithm 1 first."
+            return log, 1, ui
+
         if n_cubes is None:
             cubes, n_cubes =  D.findlattice(removed_nodes, xoffset, yoffset, zoffset)
         #assert len(defect_box) == len(measurements_list)
@@ -520,16 +528,33 @@ def findlattice(nclicks):
         click_number = nclicks % (len(cubes))
 
         if len(cubes) > 0:
+            C = nx.Graph()
+            C.add_node(tuple(cubes[click_number][0, :]))
+
+            X = D.connected_cube_to_nodes(C)
+            
+            nodes, edges = nx_to_plot(X, shape=shape, index=False)
+
             lattice = go.Scatter3d(
-            x=cubes[click_number][1:, 0],
-            y=cubes[click_number][1:, 1],
-            z=cubes[click_number][1:, 2],
+            x=nodes[0],
+            y=nodes[1],
+            z=nodes[2],
             mode='markers',
             line=dict(color='blue', width=2),
             hoverinfo='none'
-        )
-        ui = f'FindLattice: Displaying {click_number+1}/{len(cubes)} Raussendorf Latticies found for p = {p}, shape = {shape}'
+            )
+
+            lattice_edges = go.Scatter3d(
+            x=edges[0],
+            y=edges[1],
+            z=edges[2],
+            mode='lines',
+            line=dict(color='blue', width=2),
+            hoverinfo='none'
+            )
+            ui = f'FindLattice: Displaying {click_number+1}/{len(cubes)} unit cells found for p = {p}, shape = {shape}'
     except NameError:
+        # cubes, n_cubes is not defined and this is because we didnt compute the offsets.
         ui = "FindLattice: Run algorithm 1 first."
     return log, 1, ui
 
@@ -542,6 +567,11 @@ def findlattice(nclicks):
 def algorithm2(nclicks):
     global lattice, lattice_edges, connected_cubes
     try:
+        if xoffset == None:
+            # cubes, n_cubes is not defined and this is because we didnt compute the offsets.
+            ui = "FindLattice: Run algorithm 1 first."
+            return log, 1, ui
+
         if connected_cubes is None:
             C = D.build_centers_graph(cubes)
             connected_cubes = D.findconnectedlattice(C)
@@ -575,6 +605,8 @@ def algorithm2(nclicks):
         else:
             ui = f"Alg 2: No cubes found"
     except TypeError:
+        ui = "Alg 2: Run Algorithm 1 first."
+    except NameError:
         ui = "Alg 2: Run Algorithm 1 first."
     return log, 2, ui
 
