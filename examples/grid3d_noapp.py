@@ -92,10 +92,11 @@ import multiprocessing as mp
 
 cpu_cores = 2
 
-shape = [100, 100, 100]
+shape = [200, 200, 200]
 samples = 1
 n_cubes = np.empty((25, shape[0]//2, samples))
-p_vec = np.linspace(0.0, 0.25, 25)
+#p_vec = np.linspace(0.0, 0.25, 25)
+p_vec = 0
 
 input_vec = [(p, s) for p in p_vec for s in range(samples)]
 

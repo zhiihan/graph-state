@@ -36,6 +36,14 @@ import matplotlib.pyplot as plt
 plt.title('Unit cubes found')
 plt.xlabel('p, probability of losing a node')
 plt.ylabel(f'N, cubes found for {shape}')
-plt.scatter(plot_data[:, 0], plot_data[:, 1])
+plt.scatter(plot_data[:, 0], plot_data[:, 1], label=f"Plot data")
+
+
+y = plot_data[:, 1]
+x = plot_data[:, 0]
+a, b = np.polyfit(x, np.log(y), 1, w=np.sqrt(y))
+
+plt.plot(x, np.exp(b)* np.exp(a * x), label=f"y = Ae^({a:.1f}x)")
+plt.legend()
 plt.savefig('unitcubes.png')
 print(plot_data)

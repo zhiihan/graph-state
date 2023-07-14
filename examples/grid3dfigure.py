@@ -17,8 +17,8 @@ xmax = 7
 ymax = 8
 zmax = 6
 shape = [xmax, ymax, zmax]
-p = 0.05
-global_seed = None
+p = 0.06
+seed = None
 
 G = Grid([xmax, ymax, zmax]) # qubits
 D = Holes([xmax, ymax, zmax]) # holes
@@ -176,22 +176,7 @@ app.layout = html.Div([
 
                 Mouse over values in the graph.
             """)),
-            html.Pre(id='hover-data', style=styles['pre'])
-        ], className='three columns'),
-
-        html.Div([
-            dcc.Markdown(d("""
-                **Click Data**
-
-                Click on points in the graph.
-            """)),
-            dcc.Checklist(
-                ['Qubits', 'Holes', 'Lattice'],
-                ['Qubits', 'Holes', 'Lattice'],
-            id='plotoptions'), html.Button('Undo', id='undo'), html.Button('Run Algorithm 1', id='alg1'), html.Button('Find Lattice', id='findlattice'),html.Button('Run Algorithm 2', id='alg2'),
-            html.Pre(id='click-data', style=styles['pre'])], className='three columns'),
-
-        html.Div([
+            html.Pre(id='hover-data', style=styles['pre']),
             dcc.Markdown(d("""
                 **Zoom and Relayout Data**
 
@@ -202,18 +187,54 @@ app.layout = html.Div([
             """)),
             html.Pre(id='relayout-data', style=styles['pre']),
         ], className='three columns'),
+
         html.Div([
             dcc.Markdown(d("""
-                **Select Measurement Basis**
+                **Move Log**
 
-                Click to select the type of measurement.
+                Click on points in the graph.
             """)),
-            dcc.RadioItems(['Z', 'Y', 'X'], 'Z', id='radio-items'),
-            html.Div(id='slider-output-container'),
-            html.Button('Reset Grid', id='reset'), 
+ html.Button('Undo', id='undo'), html.Button('Run Algorithm 1', id='alg1'), html.Button('Find Lattice', id='findlattice'),html.Button('Run Algorithm 2', id='alg2'),
+            html.Pre(id='click-data', style=styles['pre'])], className='three columns'),
 
-            html.Div([html.Button('Reset Seed', id='reset-seed'),
-            dcc.Input(id='load-graph-seed', type="text", placeholder="Seed"),]),
+        html.Div([
+        html.Div(id='ui'),
+        dcc.Markdown(d("""
+        **Select Measurement Basis**
+
+        Click to select the type of measurement. Click points in the graph to apply measurement.
+        """)),
+        dcc.RadioItems(['Z', 'Y', 'X'], 'Z', id='radio-items'),
+        dcc.Markdown(d("""
+        **Select display options**
+        """)),
+        dcc.Checklist(
+            ['Qubits', 'Holes', 'Lattice'],
+            ['Qubits', 'Holes', 'Lattice'],
+        id='plotoptions'),
+        ], className='three columns'),
+
+
+
+        html.Div([    
+            html.Div([
+            dcc.Markdown(d("""
+            **Reset Graph State.**
+
+            Choose cube dimensions as well as a seed. If no seed, will use a random seed.
+            """)),
+            dcc.Slider(1, 15, step=1, value=xmax, tooltip={"placement": "bottom", "always_visible": True}, id="xmax"),
+            dcc.Slider(1, 15, step=1, value=ymax, tooltip={"placement": "bottom", "always_visible": True}, id="ymax"),
+            dcc.Slider(1, 15, step=1, value=zmax, tooltip={"placement": "bottom", "always_visible": True}, id="zmax"),
+            html.Button('Reset Grid', id='reset'), ]),
+            dcc.Markdown(d("""
+            **Damage the Grid.**
+
+            Select a probability p to randomly remove nodes.
+            """)),
+            dcc.Slider(0, 0.3, step=0.03, value=p, tooltip={"placement": "bottom", "always_visible": True}, id="prob"),
+            html.Div([html.Button('Damage Grid', id='reset-seed'),
+            dcc.Input(id='load-graph-seed', type="number", placeholder="Seed"),]),
             html.Div(
                 [dcc.Markdown(d("""
                 **Load Graph State**
@@ -221,7 +242,7 @@ app.layout = html.Div([
                 Paste data to load a graph state.
                 """)),
                 dcc.Input(id='load-graph-input', type="text", placeholder="Load Graph State"),
-                html.Button('Load Graph', id='load-graph-button'), html.Div(id='loaded')]
+                html.Button('Load Graph', id='load-graph-button')]
            )
         ], className='three columns'),
     ])
@@ -277,8 +298,8 @@ def display_relayout_data(relayoutData, state):
 
 
 @app.callback(
-    Output('slider-output-container', 'children'),
-    Input('radio-items', 'value'))
+    Output('ui', 'children', allow_duplicate=True),
+    Input('radio-items', 'value'), prevent_initial_call = True)
 def update_output(value):
     return 'You have selected "{}" basis'.format(value)
 
@@ -286,10 +307,20 @@ def update_output(value):
 @app.callback(
     Output('basic-interactions', 'figure', allow_duplicate=True),
     Output('click-data', 'children', allow_duplicate=True),
+    Output('ui', 'children', allow_duplicate=True),
     Input('reset', 'n_clicks'),
+    State('xmax', 'value'),
+    State('ymax', 'value'),
+    State('zmax', 'value'),
     prevent_initial_call=True)
-def reset_grid(input, move_list_reset = True):
+def reset_grid(input, xslider, yslider, zslider, move_list_reset = True):
     global G, removed_nodes, log, move_list, lattice, lattice_edges, connected_cubes
+    global shape, xmax, ymax, zmax
+
+    xmax = int(xslider)
+    ymax = int(yslider)
+    zmax = int(zslider)
+    shape = [xmax, ymax, zmax]
     
     G = Grid(shape)
     removed_nodes = np.zeros(xmax*ymax*zmax, dtype=bool)
@@ -303,30 +334,35 @@ def reset_grid(input, move_list_reset = True):
         lattice_edges = None
         connected_cubes = None
     # Make sure the view/angle stays the same when updating the figure        
-    return fig, log
+    return fig, log, "Created grid of shape {}".format(shape)
 
 @app.callback(
     Output('click-data', 'children', allow_duplicate=True),
     Output('draw-plot', 'data', allow_duplicate=True),
+    Output('ui', 'children', allow_duplicate=True),
     Input('reset-seed', 'n_clicks'),
     State('load-graph-seed', "value"),
+    State('prob', "value"),
     prevent_initial_call=True)
-def reset_seed(nclicks, seed):
+def reset_seed(nclicks, seed_input, prob):
     """
     Randomly measure qubits.
     """
-    global D
-    fig, log = reset_grid(nclicks)
+    global D, p
+    p = prob
+    fig, log, _ = reset_grid(nclicks, xmax, ymax, zmax)
     
     D = Holes(shape)
-    if seed is not None:
-        random.seed(int(seed))
-        print(f'Loaded seed : {seed}')
-    elif global_seed is not None:
-        random.seed(int(global_seed))
-        print(f'Loaded seed : {global_seed}')
+    if seed_input:
+        # The user has inputted a seed
+        random.seed(int(seed_input))
+        print(f'Loaded seed : {seed_input}, p = {p}')
+        ui = "Loaded seed : {}, p = {}".format(seed_input, p)
     else:
-        print(f'Loaded seed : {seed}')
+        # Use a random seed. 
+        random.seed()
+        print(f'Loaded seed : {seed}, p = {p}')
+        ui = "Loaded seed : None, p = {}, shape = {}".format(p, shape)
     # p is the probability of losing a qubit
 
     measurementChoice = 'Z'
@@ -340,17 +376,17 @@ def reset_seed(nclicks, seed):
             move_list.append([i, measurementChoice])
             D.add_node(i)
     D.add_edges()
-    return log, 1
+    return log, 1, ui
 
 @app.callback(
     Output('click-data', 'children', allow_duplicate=True),
     Output('draw-plot', 'data', allow_duplicate=True),
-    Output('loaded', 'children'),
+    Output('ui', 'children', allow_duplicate=True),
     Input('load-graph-button', 'n_clicks'),
     State('load-graph-input', "value"),
     prevent_initial_call=True)
 def load_graph_from_string(n_clicks, input_string):
-    reset_grid(n_clicks)
+    reset_grid(n_clicks, xmax, ymax, zmax)
 
     result = process_string(input_string)
 
@@ -394,12 +430,12 @@ def draw_plot(data, plotoptions, relayoutData):
 @app.callback(
     Output('click-data', 'children', allow_duplicate=True),
     Output('draw-plot', 'data', allow_duplicate=True),
-    Output('loaded', 'children', allow_duplicate=True),
+    Output('ui', 'children', allow_duplicate=True),
     Input('undo', 'n_clicks'),
     prevent_initial_call=True)
 def undo_move(n_clicks):
     if move_list:
-        reset_grid(n_clicks, move_list_reset=False)
+        reset_grid(n_clicks, xmax, ymax, zmax, move_list_reset=False)
         
         undo = move_list.pop(-1)
         for move in move_list:
@@ -415,7 +451,7 @@ def undo_move(n_clicks):
 @app.callback(
     Output('click-data', 'children', allow_duplicate=True),
     Output('draw-plot', 'data', allow_duplicate=True),
-    Output('loaded', 'children', allow_duplicate=True),
+    Output('ui', 'children', allow_duplicate=True),
     Input('alg1', 'n_clicks'),
     prevent_initial_call=True)
 def algorithm1(nclicks):
@@ -455,16 +491,14 @@ def algorithm1(nclicks):
     
     global cubes, n_cubes
     cubes, n_cubes = D.findlattice(removed_nodes, xoffset, yoffset, zoffset)
-    print(f'{n_cubes[0]} of size 1 Raussendorf Latticies found for p = {p}, shape = {shape}')
+    ui = f'Alg 1: {n_cubes[0]} unit cells found for p = {p}, shape = {shape}'
 
-    print(f'cubes of size {n_cubes} found')
-
-    return log, 1, 'Ran Algorithm 1'
+    return log, 1, ui
 
 @app.callback(
     Output('click-data', 'children', allow_duplicate=True),
     Output('draw-plot', 'data', allow_duplicate=True),
-    Output('loaded', 'children', allow_duplicate=True),
+    Output('ui', 'children', allow_duplicate=True),
     Input('findlattice', 'n_clicks'),
     prevent_initial_call=True)
 def findlattice(nclicks):
@@ -473,32 +507,33 @@ def findlattice(nclicks):
     """
     global cubes, n_cubes, lattice
 
-    if n_cubes is None:
-        cubes, n_cubes =  D.findlattice(removed_nodes, xoffset, yoffset, zoffset)
-    #assert len(defect_box) == len(measurements_list)
+    try:
+        if n_cubes is None:
+            cubes, n_cubes =  D.findlattice(removed_nodes, xoffset, yoffset, zoffset)
+        #assert len(defect_box) == len(measurements_list)
 
-    print(f'{len(cubes)} Raussendorf Latticies found for p = {p}, shape = {shape}')
-    print(f'cubes of size {n_cubes} found')
+        print(f'cubes of size {n_cubes} found')
 
-    click_number = nclicks % (len(cubes))
+        click_number = nclicks % (len(cubes))
 
-    if len(cubes) > 0:
-        lattice = go.Scatter3d(
-        x=cubes[click_number][1:, 0],
-        y=cubes[click_number][1:, 1],
-        z=cubes[click_number][1:, 2],
-        mode='markers',
-        line=dict(color='blue', width=2),
-        hoverinfo='none'
-    )
-
-
-    return log, 1, 'Ran Algorithm 1'
+        if len(cubes) > 0:
+            lattice = go.Scatter3d(
+            x=cubes[click_number][1:, 0],
+            y=cubes[click_number][1:, 1],
+            z=cubes[click_number][1:, 2],
+            mode='markers',
+            line=dict(color='blue', width=2),
+            hoverinfo='none'
+        )
+        ui = f'FindLattice: Displaying {click_number+1}/{len(cubes)} Raussendorf Latticies found for p = {p}, shape = {shape}'
+    except NameError:
+        ui = "FindLattice: Run algorithm 1 first."
+    return log, 1, ui
 
 @app.callback(
     Output('click-data', 'children', allow_duplicate=True),
     Output('draw-plot', 'data', allow_duplicate=True),
-    Output('loaded', 'children', allow_duplicate=True),
+    Output('ui', 'children', allow_duplicate=True),
     Input('alg2', 'n_clicks'),
     prevent_initial_call=True)
 def algorithm2(nclicks):
@@ -532,8 +567,9 @@ def algorithm2(nclicks):
         line=dict(color='blue', width=2),
         hoverinfo='none'
         )
-    
-        
-    return log, 2, 'Ran Algorithm 2'
+        ui = f"Alg 2: Displaying {click_number+1}/{len(connected_cubes)}, unit cells = {len(connected_cubes[click_number].nodes)}, edges = {len(connected_cubes[click_number].edges)}"    
+    else:
+        ui = f"Alg 2: No cubes found"
+    return log, 2, ui
 
 app.run_server(debug=True, use_reloader=False)

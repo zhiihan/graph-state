@@ -36,8 +36,9 @@ class Holes:
             return False
 
     def add_edges(self):
-        for n in self.graph.nodes:
-            for n2 in self.graph.nodes:
+        nodes = list(self.graph.nodes)
+        for index, n in enumerate(nodes):
+            for n2 in nodes[index:]:
                 if self.are_nodes_connected(n, n2):
                     self.graph.add_edge(n, n2)
         self.double_hole()
