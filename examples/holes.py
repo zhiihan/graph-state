@@ -17,7 +17,7 @@ class Holes:
         index_x = i % self.shape[0]
         index_y = (i // self.shape[0]) % self.shape[1]
         index_z = (i // (self.shape[0] * self.shape[1])) % self.shape[2]
-        return np.array([index_x, index_y, index_z])
+        return np.array([index_x, index_y, index_z], dtype=int)
 
     def add_node(self, i, graph_add_node=True):
         self.node_coords.update({
@@ -70,7 +70,7 @@ class Holes:
                
         scale = 1
         cubes = []
-        centers = [np.array([x, y, z]) for z in range(self.shape[2]) for y in range(self.shape[1]) for x in range(self.shape[0])
+        centers = [np.array([x, y, z], dtype=int) for z in range(self.shape[2]) for y in range(self.shape[1]) for x in range(self.shape[0])
                 if ((x + xoffset) % 2 == (z + zoffset) % 2) and ((y + yoffset) % 2 == (z + zoffset) % 2)]
 
         n_cubes = np.zeros((self.shape[0]//2))
@@ -165,42 +165,42 @@ class Holes:
     
 
     def big_arrays(self):
-        self.taxicab2 = [np.array([-2,  0,  0]),
-        np.array([-1, -1,  0]),
-        np.array([-1,  0, -1]),
-        np.array([-1,  0,  1]),
-        np.array([-1,  1,  0]),
-        np.array([ 0, -2,  0]),
-        np.array([ 0, -1, -1]),
-        np.array([ 0, -1,  1]),
-        np.array([ 0,  0, -2]),
-        np.array([ 0,  1, -1]),
-        np.array([0, 1, 1]),
-        np.array([ 1, -1,  0]),
-        np.array([ 1,  0, -1]),
-        np.array([1, 0, 1]),
-        np.array([1, 1, 0])]
+        self.taxicab2 = [np.array([-2,  0,  0], dtype=int),
+        np.array([-1, -1,  0], dtype=int),
+        np.array([-1,  0, -1], dtype=int),
+        np.array([-1,  0,  1], dtype=int),
+        np.array([-1,  1,  0], dtype=int),
+        np.array([ 0, -2,  0], dtype=int),
+        np.array([ 0, -1, -1], dtype=int),
+        np.array([ 0, -1,  1], dtype=int),
+        np.array([ 0,  0, -2], dtype=int),
+        np.array([ 0,  1, -1], dtype=int),
+        np.array([0, 1, 1], dtype=int),
+        np.array([ 1, -1,  0], dtype=int),
+        np.array([ 1,  0, -1], dtype=int),
+        np.array([1, 0, 1], dtype=int),
+        np.array([1, 1, 0], dtype=int)]
 
-        self.taxicab3 = [np.array([-2, -1,  0]),
-        np.array([-2,  0, -1]),
-        np.array([-2,  0,  1]),
-        np.array([-2,  1,  0]),
-        np.array([-1, -2,  0]),
-        np.array([-1, -1, -1]),
-        np.array([-1, -1,  1]),
-        np.array([-1,  0, -2]),
-        np.array([-1,  1, -1]),
-        np.array([-1,  1,  1]),
-        np.array([ 0, -2, -1]),
-        np.array([ 0, -2,  1]),
-        np.array([ 0, -1, -2]),
-        np.array([ 0,  1, -2]),
-        np.array([ 1, -2,  0]),
-        np.array([ 1, -1, -1]),
-        np.array([ 1, -1,  1]),
-        np.array([ 1,  0, -2]),
-        np.array([ 1,  1, -1]),
-        np.array([1, 1, 1])]
+        self.taxicab3 = [np.array([-2, -1,  0], dtype=int),
+        np.array([-2,  0, -1], dtype=int),
+        np.array([-2,  0,  1], dtype=int),
+        np.array([-2,  1,  0], dtype=int),
+        np.array([-1, -2,  0], dtype=int),
+        np.array([-1, -1, -1], dtype=int),
+        np.array([-1, -1,  1], dtype=int),
+        np.array([-1,  0, -2], dtype=int),
+        np.array([-1,  1, -1], dtype=int),
+        np.array([-1,  1,  1], dtype=int),
+        np.array([ 0, -2, -1], dtype=int),
+        np.array([ 0, -2,  1], dtype=int),
+        np.array([ 0, -1, -2], dtype=int),
+        np.array([ 0,  1, -2], dtype=int),
+        np.array([ 1, -2,  0], dtype=int),
+        np.array([ 1, -1, -1], dtype=int),
+        np.array([ 1, -1,  1], dtype=int),
+        np.array([ 1,  0, -2], dtype=int),
+        np.array([ 1,  1, -1], dtype=int),
+        np.array([1, 1, 1], dtype=int)]
 
         self.cube = [np.array([0, -1, -1]),
         np.array([-1, 0, -1]),
