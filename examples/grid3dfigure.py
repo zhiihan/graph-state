@@ -204,7 +204,7 @@ app.layout = html.Div([
 
         Click to select the type of measurement. Click points in the graph to apply measurement.
         """)),
-        dcc.RadioItems(['Z', 'Y', 'X'], 'Z', id='radio-items'),
+        dcc.RadioItems(['Z', 'Y', 'X', 'Z:Hole'], 'Z', id='radio-items', inline=True),
         dcc.Markdown(d("""
         **Select display options**
         """)),
@@ -259,7 +259,8 @@ def display_hover_data(hoverData):
 @app.callback(
     Output('click-data', 'children'),
     Output('draw-plot','data'),
-    Input('basic-interactions', 'clickData'), State('radio-items', 'value'), State('click-data', 'children'))
+    Output('ui', 'children', allow_duplicate=True),
+    Input('basic-interactions', 'clickData'), State('radio-items', 'value'), State('click-data', 'children'), prevent_initial_call = True)
 def display_click_data(clickData, measurementChoice, clickLog):
     global removed_nodes, move_list
     if not clickData:
@@ -267,20 +268,22 @@ def display_click_data(clickData, measurementChoice, clickLog):
     point = clickData["points"][0]
     # Do something only for a specific trace
     if point["curveNumber"] > 0 or 'x' not in point:
-        return dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, ""
     else: 
         i = get_node_index(point['x'], point['y'], point['z'], shape)
         # Update the plot based on the node clicked
-        if removed_nodes[i] == False :
+        if measurementChoice == 'Z:Hole':
+            D.add_node(i)
+            measurementChoice = 'Z' # Handle it as if it was Z measurement
+        if removed_nodes[i] == False:
             removed_nodes[i] = True
             G.handle_measurements(i, measurementChoice)
             move_list.append([i, measurementChoice])
-            print('clickedon', i)
-    time.sleep(0.1)
-    log.append(f"{i}, {measurementChoice}; ")
-    log.append(html.Br())
-    
-    return html.P(log), i
+            ui = f"Clicked on {i} at {get_node_coords(i, shape)}"
+        time.sleep(0.1)
+        log.append(f"{i}, {measurementChoice}; ")
+        log.append(html.Br())    
+        return html.P(log), i, ui
 
 
 
@@ -491,7 +494,7 @@ def algorithm1(nclicks):
     
     global cubes, n_cubes
     cubes, n_cubes = D.findlattice(removed_nodes, xoffset, yoffset, zoffset)
-    ui = f'Alg 1: {n_cubes[0]} unit cells found for p = {p}, shape = {shape}'
+    ui = f'Alg 1: Found {int(n_cubes[0])} unit cells. Offsets = {(xoffset, yoffset, zoffset)}'
 
     return log, 1, ui
 
@@ -538,38 +541,41 @@ def findlattice(nclicks):
     prevent_initial_call=True)
 def algorithm2(nclicks):
     global lattice, lattice_edges, connected_cubes
-    if connected_cubes is None:
-        C = D.build_centers_graph(cubes)
-        connected_cubes = D.findconnectedlattice(C)
-    for i in connected_cubes:
-        print(i, len(connected_cubes))
-    
-    if len(connected_cubes) > 0:
-        click_number = nclicks % (len(connected_cubes))
-        X = D.connected_cube_to_nodes(connected_cubes[click_number])
+    try:
+        if connected_cubes is None:
+            C = D.build_centers_graph(cubes)
+            connected_cubes = D.findconnectedlattice(C)
+        for i in connected_cubes:
+            print(i, len(connected_cubes))
         
-        nodes, edges = nx_to_plot(X, shape=shape, index=False)
+        if len(connected_cubes) > 0:
+            click_number = nclicks % (len(connected_cubes))
+            X = D.connected_cube_to_nodes(connected_cubes[click_number])
+            
+            nodes, edges = nx_to_plot(X, shape=shape, index=False)
 
-        lattice = go.Scatter3d(
-        x=nodes[0],
-        y=nodes[1],
-        z=nodes[2],
-        mode='markers',
-        line=dict(color='blue', width=2),
-        hoverinfo='none'
-        )
+            lattice = go.Scatter3d(
+            x=nodes[0],
+            y=nodes[1],
+            z=nodes[2],
+            mode='markers',
+            line=dict(color='blue', width=2),
+            hoverinfo='none'
+            )
 
-        lattice_edges = go.Scatter3d(
-        x=edges[0],
-        y=edges[1],
-        z=edges[2],
-        mode='lines',
-        line=dict(color='blue', width=2),
-        hoverinfo='none'
-        )
-        ui = f"Alg 2: Displaying {click_number+1}/{len(connected_cubes)}, unit cells = {len(connected_cubes[click_number].nodes)}, edges = {len(connected_cubes[click_number].edges)}"    
-    else:
-        ui = f"Alg 2: No cubes found"
+            lattice_edges = go.Scatter3d(
+            x=edges[0],
+            y=edges[1],
+            z=edges[2],
+            mode='lines',
+            line=dict(color='blue', width=2),
+            hoverinfo='none'
+            )
+            ui = f"Alg 2: Displaying {click_number+1}/{len(connected_cubes)}, unit cells = {len(connected_cubes[click_number].nodes)}, edges = {len(connected_cubes[click_number].edges)}"    
+        else:
+            ui = f"Alg 2: No cubes found"
+    except TypeError:
+        ui = "Alg 2: Run Algorithm 1 first."
     return log, 2, ui
 
 app.run_server(debug=True, use_reloader=False)
