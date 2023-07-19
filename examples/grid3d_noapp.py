@@ -57,16 +57,24 @@ def main(input):
     """
     start = time.time()
 
-    p, seed = input
+    p, seed, rounds = input
     
     data = np.zeros(samples)
 
     D, removed_nodes = reset_seed(p, seed, shape)
     print('done building grid', f'p = {p}, samples={seed}/{samples}')
+
+    for i in range(rounds+1):
+        repairs, failures = D.repair_grid(p)
+
+
     xoffset, yoffset, zoffset = algorithm1(D, removed_nodes, shape)
     cubes, n_cubes = D.findlattice(removed_nodes, xoffset, yoffset, zoffset)
     print('latticies found', f'p = {p}, samples={seed}/{samples}')
+
     
+
+
     C = D.build_centers_graph(cubes)
     
     #with open(f'./data/ncubes{p:.4f}shape{shape[0]}sample{seed}', 'wb') as f:
@@ -77,8 +85,8 @@ def main(input):
     #    pickle.dump(connected_cubes, f)
     
     largestcc = D.findmaxconnectedlattice(C)
-    #with open(f'./data/cc{p:.4f}shape{shape[0]}sample{seed}', 'wb') as f:
-    #    pickle.dump(largestcc, f)
+    with open(f'./data/cc{p:.4f}shape{shape[0]}{shape[1]}{shape[2]}sample{seed}', 'wb') as f:
+        pickle.dump(largestcc, f)
 
     end1loop = time.time()
     print((end1loop-start)/60, 'mins elapsed', f'p = {p}, samples={seed}/{samples}')
@@ -92,16 +100,17 @@ import multiprocessing as mp
 
 cpu_cores = 2
 
-shape = [200, 200, 200]
+shape = [100, 100, 100]
 samples = 1
 n_cubes = np.empty((25, shape[0]//2, samples))
-#p_vec = np.linspace(0.0, 0.25, 25)
-p_vec = 0
+p_vec = np.linspace(0.0, 0.5, 50)
+rounds_max = 30
 
-input_vec = [(p, s) for p in p_vec for s in range(samples)]
+input_vec = [(p, s, r) for p in p_vec for s in range(samples) for r in range(0, rounds_max, 5)]
 
 if __name__ == "__main__":
     start = time.time()
+    print(input_vec)
     pool = mp.Pool(processes=cpu_cores)
     results = pool.map(main, input_vec)
     pool.close()

@@ -6,33 +6,20 @@ import time
 class Holes:
     def __init__(self, shape):
         self.shape = shape
-        self.node_coords = {}
         self.graph = nx.Graph()
         self.big_arrays()
 
-    def get_node_index(self, x, y, z):
-        return x + y * self.shape[1] + z * self.shape[1] * self.shape[2]
+    def add_node(self, i):
+        self.graph.add_node(tuple(get_node_coords(i, shape=self.shape)))
 
-    def get_node_coords(self, i):
-        index_x = i % self.shape[0]
-        index_y = (i // self.shape[0]) % self.shape[1]
-        index_z = (i // (self.shape[0] * self.shape[1])) % self.shape[2]
-        return np.array([index_x, index_y, index_z], dtype=int)
-
-    def add_node(self, i, graph_add_node=True):
-        self.node_coords.update({
-            i : get_node_coords(i, self.shape)
-        })
-        if graph_add_node:
-            self.graph.add_node(i)
-
-    def add_edges(self):
+    def add_edges(self, double_hole=False):
         nodes = list(self.graph.nodes)
         for index, n in enumerate(nodes):
             for n2 in nodes[index:]:
                 if taxicab_metric(n, n2) == 1:
                     self.graph.add_edge(n, n2)
-        self.double_hole()
+        if double_hole:
+            self.double_hole()
 
     def to_networkx(self):
         self.add_edges()
@@ -48,9 +35,9 @@ class Holes:
 
         #self.double_holes = nx.Graph()
 
-        for i in self.node_coords.keys():
-            for j in self.node_coords.keys():
-                x_diff = np.abs(np.array(self.node_coords[i]) - np.array(self.node_coords[j]))
+        for i in self.graph.nodes():
+            for j in self.graph.nodes():
+                x_diff = np.abs(np.array(i) - np.array(j))
                 if np.sum(x_diff) == 2:
                     if not ((x_diff[0] == 2) or (x_diff[1] == 2) or (x_diff[2] == 2)):
                         self.graph.add_edge(i, j)
@@ -170,6 +157,45 @@ class Holes:
         connected_cubes = [C.subgraph(c).copy() for c in nx.connected_components(C)]
         return connected_cubes
     
+    def repair_grid(self, p):
+        """
+        Naive algorithm.
+        """
+        D = self.graph
+        connected_holes = [D.subgraph(d).copy() for d in nx.connected_components(D)]
+
+        weakmeasures = set()
+        for subgraph in connected_holes: # Loop over all subgraphs
+            for n in subgraph.nodes: #Loop over all nodes in a subgraph
+                for boxvec in self.box: #For each node, find the vector up/down/left/right/front/back
+                    arr = np.array(n) + boxvec 
+                    if np.any((arr < 0) | np.greater_equal(arr, self.shape)):
+                        continue
+                    # If this vector is not in the list of weak measurements, add it
+                    if tuple(arr) not in weakmeasures: 
+                        weakmeasures.add(tuple(arr))
+
+        repairs, failures = self.repair(weakmeasures, p)
+        return repairs, failures
+
+    def repair(self, weakmeasures, p): 
+        """
+        Given some weak measurements, roll p.
+        """
+        D = nx.Graph()
+        
+        failures = []
+        repairs = []
+        for i in weakmeasures:
+            if np.random.uniform() < p:
+                D.add_node(i)
+                failures.append(i)
+            else:
+                repairs.append(i)
+        self.graph = D 
+        return repairs, failures
+        
+        
 
     def big_arrays(self):
         self.taxicab2 = [np.array([-2,  0,  0], dtype=int),
@@ -227,3 +253,10 @@ class Holes:
         np.array([0, 0, 1]),
         np.array([1, 0, 1]),
         np.array([0, 1, 1])]
+
+        self.box = [np.array([1, 0, 0]),
+        np.array([-1, 0, 0]),
+        np.array([0, 1, 0]),
+        np.array([0, -1, 0]),
+        np.array([0, 0, 1]),
+        np.array([0, 0, -1]),]

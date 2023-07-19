@@ -17,7 +17,7 @@ xmax = 7
 ymax = 8
 zmax = 6
 shape = [xmax, ymax, zmax]
-p = 0.06
+p = 0.5
 seed = None
 
 G = Grid([xmax, ymax, zmax]) # qubits
@@ -64,7 +64,7 @@ def update_plot(g, plotoptions=['Qubits', 'Holes', 'Lattice']):
             gnx.remove_node(i)
 
     g_nodes, g_edges = nx_to_plot(gnx, shape)
-    h_nodes, h_edges = nx_to_plot(hnx, shape)
+    h_nodes, h_edges = nx_to_plot(hnx, shape, index=False)
     #x_removed_nodes = [g.node_coords[j][0] for j in removed_nodes]
     #y_removed_nodes = [g.node_coords[j][1] for j in removed_nodes]
     #z_removed_nodes = [g.node_coords[j][2] for j in removed_nodes]   
@@ -194,7 +194,7 @@ app.layout = html.Div([
 
                 Click on points in the graph.
             """)),
- html.Button('Undo', id='undo'), html.Button('Run Algorithm 1', id='alg1'), html.Button('Find Lattice', id='findlattice'),html.Button('Run Algorithm 2', id='alg2'),
+ html.Button('Undo', id='undo'), html.Button('Run Algorithm 1', id='alg1'), html.Button('Find Lattice', id='findlattice'),html.Button('Run Algorithm 2', id='alg2'), html.Button('Repair Lattice', id='alg3'),
             html.Pre(id='click-data', style=styles['pre'])], className='three columns'),
 
         html.Div([
@@ -467,7 +467,7 @@ def algorithm1(nclicks):
 
     #counting where the holes are
     for h in holes:
-        x, y, z = get_node_coords(h, shape)
+        x, y, z = h
         for zoffset in range(2):
             for yoffset in range(2):
                 for xoffset in range(2):
@@ -523,8 +523,6 @@ def findlattice(nclicks):
             cubes, n_cubes =  D.findlattice(removed_nodes, xoffset, yoffset, zoffset)
         #assert len(defect_box) == len(measurements_list)
 
-        print(f'cubes of size {n_cubes} found')
-
         click_number = nclicks % (len(cubes))
 
         if len(cubes) > 0:
@@ -572,9 +570,8 @@ def algorithm2(nclicks):
             ui = "FindLattice: Run algorithm 1 first."
             return log, 1, ui
 
-        if connected_cubes is None:
-            C = D.build_centers_graph(cubes)
-            connected_cubes = D.findconnectedlattice(C)
+        C = D.build_centers_graph(cubes)
+        connected_cubes = D.findconnectedlattice(C)
         for i in connected_cubes:
             print(i, len(connected_cubes))
         
@@ -609,5 +606,33 @@ def algorithm2(nclicks):
     except NameError:
         ui = "Alg 2: Run Algorithm 1 first."
     return log, 2, ui
+
+@app.callback(
+    Output('click-data', 'children', allow_duplicate=True),
+    Output('draw-plot', 'data', allow_duplicate=True),
+    Output('ui', 'children', allow_duplicate=True),
+    Input('alg3', 'n_clicks'),
+    prevent_initial_call=True)
+def repairgrid(nclicks):
+    
+    repairs, failures = D.repair_grid(p)
+    
+    reset_grid(nclicks, xmax, ymax, zmax, move_list_reset=False)
+    for f in failures:
+        i = get_node_index(*f, shape)
+        removed_nodes[i] = True
+        G.handle_measurements(i, 'Z')
+        log.append(f"{i}, Z; ")
+        log.append(html.Br())
+        move_list.append([i, 'Z'])
+    
+    
+    if len(repairs)+len(failures) > 0:
+        rate = len(repairs)/(len(repairs)+len(failures))
+        ui = f'Repairs = {len(repairs)}, Failures = {len(failures)} Repair Rate = {rate:.2f}, Holes = {np.sum(removed_nodes)}, peff={np.sum(removed_nodes)/(xmax*ymax*zmax)}'
+    else:
+        ui = 'All qubits repaired!'
+    return log, 2, ui
+
 
 app.run_server(debug=True, use_reloader=False)
