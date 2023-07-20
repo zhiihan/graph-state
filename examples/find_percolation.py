@@ -22,8 +22,8 @@ for rounds in range(0, rounds_max, 5):
             with open(f'./data/repairs/cc{p:.4f}shape{shape[0]}{shape[1]}{shape[2]}sample{seed}rounds{rounds}', 'rb') as f:
                 try:
                     cc = pickle.load(f)
-                    low = np.array([np.inf, np.inf, np.inf])
-                    high = np.zeros(3)
+                    low = np.array([np.iinfo(np.int64).max, np.iinfo(np.int64).max, np.iinfo(np.int64).max], dtype=int)
+                    high = np.zeros(3, dtype=int)
                     for n in cc:
                         low = np.minimum(low, np.array(n))
                         high = np.maximum(high, n)
