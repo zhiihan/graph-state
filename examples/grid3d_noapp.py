@@ -3,6 +3,14 @@ import random
 import numpy as np
 from helperfunctions import *
 
+cpu_cores = 2
+
+shape = [100, 100, 100]
+samples = 1
+n_cubes = np.empty((25, shape[0]//2, samples))
+p_vec = np.linspace(0.0, 0.5, 50)
+rounds_max = 30
+
 def reset_seed(p, seed, shape):
     """
     Randomly measure qubits.
@@ -17,7 +25,7 @@ def reset_seed(p, seed, shape):
     for i in range(shape[0]*shape[1]*shape[2]):
         if random.random() < p:
             removed_nodes[i] = True
-            #D.add_node(i, graph_add_node=False)
+            D.add_node(i)
         if i % 10000000 == 0:
             print(i/(shape[0]*shape[1]*shape[2])*100)
     return D, removed_nodes
@@ -29,7 +37,7 @@ def algorithm1(D, removed_nodes, shape):
 
     #counting where the holes are
     for h in holes:
-        x, y, z = get_node_coords(h, shape)
+        x, y, z = h
         for zoffset in range(2):
             for yoffset in range(2):
                 for xoffset in range(2):
@@ -89,7 +97,7 @@ def main(input):
     #    pickle.dump(connected_cubes, f)
     
     largestcc = D.findmaxconnectedlattice(C)
-    with open(f'./data/cc{p:.4f}shape{shape[0]}{shape[1]}{shape[2]}sample{seed}', 'wb') as f:
+    with open(f'./data/cc{p:.4f}shape{shape[0]}{shape[1]}{shape[2]}sample{seed}round{rounds}', 'wb') as f:
         pickle.dump(largestcc, f)
 
     end1loop = time.time()
@@ -102,13 +110,7 @@ import matplotlib.pyplot as plt
 import time
 import multiprocessing as mp
 
-cpu_cores = 2
 
-shape = [100, 100, 100]
-samples = 1
-n_cubes = np.empty((25, shape[0]//2, samples))
-p_vec = np.linspace(0.0, 0.5, 50)
-rounds_max = 30
 
 input_vec = [(p, s, r) for p in p_vec for s in range(samples) for r in range(0, rounds_max, 5)]
 
