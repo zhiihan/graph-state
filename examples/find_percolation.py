@@ -11,13 +11,11 @@ shape = [100, 100, 100]
 samples = 10
 p_vec = np.linspace(0.0, 0.40, 50)
 plot_data = np.empty((len(p_vec), 2))
-rounds_max = [0, 1, 2, 3, 5, 10, 30, 100]
-
 import multiprocessing as mp
 import time
+cpu_cores = 8
+input_vec = [0, 1, 2, 3, 5, 10, 30, 100]
 
-cpu_cores = 5
-input_vec = [r for r in rounds_max]
 
 
 
@@ -35,7 +33,7 @@ def main(input_vec):
                 try:
                     cc = pickle.load(f)
                     low = np.array([np.inf, np.inf, np.inf])
-                    high = np.zeros(3, dtype=int)
+                    high = np.zeros(3)
                     for n in cc:
                         low = np.minimum(low, np.array(n))
                         high = np.maximum(high, n)
@@ -75,7 +73,7 @@ if __name__ == "__main__":
         plt.xlabel('p, probability of losing a node')
         plt.ylabel('x_max - x_min')
         if rounds < 5:
-            plt.plot(plot_data[:, 0], plot_data[:, 1], label=f'r = {rounds} rounds, shape = {shape}')
+            plt.plot(plot_data[:, 0], plot_data[:, 1], label=f'r = {rounds+1} rounds, shape = {shape}')
         else:
             plt.plot(plot_data[:, 0], plot_data[:, 1], label=f'r = {rounds} rounds, shape = {shape}')
         plt.legend()
