@@ -72,13 +72,14 @@ def main(input):
     D, removed_nodes = reset_seed(p, seed, shape)
     print('done building grid', f'p = {p}, samples={seed}/{samples}')
 
-    for i in range(rounds+1):
-        repairs, failures = D.repair_grid(p)
+    if rounds > 0:
+        for i in range(rounds):
+            repairs, failures = D.repair_grid(p)
 
-    removed_nodes = np.zeros(shape[0]*shape[1]*shape[2], dtype=bool)
-    for f in failures:
-        i = get_node_index(*f, shape)
-        removed_nodes[i] = True
+        removed_nodes = np.zeros(shape[0]*shape[1]*shape[2], dtype=bool)
+        for f in failures:
+            i = get_node_index(*f, shape)
+            removed_nodes[i] = True
 
     xoffset, yoffset, zoffset = algorithm1(D, removed_nodes, shape)
     cubes, n_cubes = D.findlattice(removed_nodes, xoffset, yoffset, zoffset)
