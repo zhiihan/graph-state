@@ -14,11 +14,12 @@ from helperfunctions import *
 
 # Global constants
 xmax = 7
-ymax = 8
-zmax = 6
+ymax = 7
+zmax = 7
 shape = [xmax, ymax, zmax]
-p = 0.5
+p = 0.2
 seed = None
+path_clicks = 0
 
 G = Grid([xmax, ymax, zmax]) # qubits
 D = Holes([xmax, ymax, zmax]) # holes
@@ -194,7 +195,12 @@ app.layout = html.Div([
 
                 Click on points in the graph.
             """)),
- html.Button('Undo', id='undo'), html.Button('Run Algorithm 1', id='alg1'), html.Button('Find Lattice', id='findlattice'),html.Button('Run Algorithm 2', id='alg2'), html.Button('Repair Lattice', id='alg3'),
+            html.Button('Undo', id='undo'), 
+            html.Button('Run Algorithm 1', id='alg1'), 
+            html.Button('Find Lattice', id='findlattice'),
+            html.Button('Run Algorithm 2', id='alg2'), 
+            html.Button('Repair Lattice', id='repair'),
+            html.Button('Run Alg 3', id='alg3'),
             html.Pre(id='click-data', style=styles['pre'])], className='three columns'),
 
         html.Div([
@@ -356,7 +362,6 @@ def reset_seed(nclicks, seed_input, prob):
     """
     global D, p
     p = prob
-    fig, log, _ = reset_grid(nclicks, xmax, ymax, zmax)
     
     D = Holes(shape)
     if seed_input:
@@ -375,12 +380,13 @@ def reset_seed(nclicks, seed_input, prob):
     
     for i in range(xmax*ymax*zmax):
         if random.random() < p:
-            removed_nodes[i] = True
-            G.handle_measurements(i, measurementChoice)
-            log.append(f"{i}, {measurementChoice}; ")
-            log.append(html.Br())
-            move_list.append([i, measurementChoice])
-            D.add_node(i)
+            if removed_nodes[i] == False:
+                removed_nodes[i] = True
+                G.handle_measurements(i, measurementChoice)
+                log.append(f"{i}, {measurementChoice}; ")
+                log.append(html.Br())
+                move_list.append([i, measurementChoice])
+                D.add_node(i)
     D.add_edges()
     return log, 1, ui
 
@@ -463,7 +469,7 @@ def undo_move(n_clicks):
 def algorithm1(nclicks):
     holes = D.graph.nodes
     hole_locations = np.zeros(8)
-    global xoffset, yoffset, zoffset
+    global xoffset, yoffset, zoffset, removed_nodes
 
     #counting where the holes are
     for h in holes:
@@ -612,6 +618,64 @@ def algorithm2(nclicks):
     Output('draw-plot', 'data', allow_duplicate=True),
     Output('ui', 'children', allow_duplicate=True),
     Input('alg3', 'n_clicks'),
+    prevent_initial_call=True)
+def algorithm3(nclicks):
+    global lattice, lattice_edges, path_clicks
+
+    gnx = G.to_networkx()
+
+    removed_nodes_reshape = removed_nodes.reshape((xmax, ymax, zmax))
+    
+    zeroplane = removed_nodes_reshape[:, :, 0]
+    zmaxplane = removed_nodes_reshape[:, :, zmax-1]
+
+    x = np.argwhere(zeroplane == 0) #This is the coordinates of all valid node in z = 0
+    y = np.argwhere(zmaxplane == 0) #This is the coordinates of all valid node in z = L
+
+
+    path = None
+    while path is None:
+        try:
+            i = get_node_index(*x[path_clicks % len(x)], 0, shape)
+            j = get_node_index(*y[path_clicks // len(x)], zmax-1, shape)
+            path = nx.shortest_path(gnx, i, j)
+        except nx.exception.NetworkXNoPath:
+            ui = "No path."
+            print(f'no path, {i}, {j}')
+        finally:
+            path_clicks += 1
+
+    nodes, edges = path_to_plot(path, shape)
+        
+    lattice = go.Scatter3d(
+    x=nodes[0],
+    y=nodes[1],
+    z=nodes[2],
+    mode='markers',
+    line=dict(color='blue', width=2),
+    hoverinfo='none'
+    )
+
+    lattice_edges = go.Scatter3d(
+    x=edges[0],
+    y=edges[1],
+    z=edges[2],
+    mode='lines',
+    line=dict(color='blue', width=2),
+    hoverinfo='none'
+    )
+
+    ui = "Alg 3 ran"
+    return log, 1, ui
+    
+    
+    
+
+@app.callback(
+    Output('click-data', 'children', allow_duplicate=True),
+    Output('draw-plot', 'data', allow_duplicate=True),
+    Output('ui', 'children', allow_duplicate=True),
+    Input('repair', 'n_clicks'),
     prevent_initial_call=True)
 def repairgrid(nclicks):
     
