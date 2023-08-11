@@ -17,7 +17,7 @@ xmax = 7
 ymax = 7
 zmax = 7
 shape = [xmax, ymax, zmax]
-p = 0.2
+p = 0.5
 seed = None
 path_clicks = 0
 

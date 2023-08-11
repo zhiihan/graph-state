@@ -2,6 +2,7 @@
 # Created by https://www.gitignore.io/api/c++,node,cmake,macos,linux,python,windows
 # Edit at https://www.gitignore.io/?templates=c++,node,cmake,macos,linux,python,windows
 data/
+datakero/
 
 #
 *.png
