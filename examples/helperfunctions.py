@@ -2,6 +2,7 @@ import numpy as np
 from graph_state import GraphState
 from collections import Counter
 import plotly.graph_objects as go
+from plotly.io import from_json
 
 
 def get_node_index(x, y, z, shape):
@@ -191,17 +192,29 @@ def update_plot(s, g, d, plotoptions=["Qubits", "Holes", "Lattice"]):
     # Include the traces we want to plot and create a figure
     data = [trace_nodes, trace_edges, trace_holes, trace_holes_edges]
     if s.lattice:
+        lattice_nodes = go.Scatter3d(
+            from_json(s.lattice_edges).data[0],
+            mode="markers",
+            line=dict(color="blue", width=2),
+            hoverinfo="none",
+        )
         if "Lattice" in plotoptions:
-            s.lattice.visible = True
+            lattice_nodes.visible = True
         else:
-            s.lattice.visible = "legendonly"
-        data.append(s.lattice)
+            lattice_nodes.visible = "legendonly"
+        data.append(lattice_nodes)
     if s.lattice_edges:
+        lattice_edges = go.Scatter3d(
+            from_json(s.lattice_edges).data[0],
+            mode="lines",
+            line=dict(color="blue", width=2),
+            hoverinfo="none",
+        )
         if "Lattice" in plotoptions:
-            s.lattice_edges.visible = True
+            lattice_edges.visible = True
         else:
-            s.lattice_edges.visible = "legendonly"
-        data.append(s.lattice_edges)
+            lattice_edges.visible = "legendonly"
+        data.append(lattice_edges)
 
     fig = go.Figure(data=data)
     fig.layout.height = 600

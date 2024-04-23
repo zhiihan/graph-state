@@ -1,6 +1,7 @@
 import plotly.graph_objects as go
 from grid import Grid
 from holes import Holes
+from state import BrowserState
 import json
 from textwrap import dedent as d
 import dash
@@ -10,7 +11,6 @@ import time
 import random
 import numpy as np
 import networkx as nx
-from state import BrowserState
 import jsonpickle
 import jsonpickle.ext.numpy as jsonpickle_numpy
 
@@ -218,6 +218,9 @@ app.layout = html.Div(
     Input("none", "children"),
 )
 def initial_call(dummy):
+    """
+    Initialize the graph in the browser as a JSON object.
+    """
     s = BrowserState()
     G = Grid(s.shape)
     D = Holes(s.shape)
@@ -304,6 +307,9 @@ def display_click_data(
     prevent_initial_call=True,
 )
 def display_relayout_data(relayoutData, camera, browser_data):
+    """
+    Updates zoom and camera information.
+    """
     if browser_data is not None:
         s = jsonpickle.decode(browser_data)
 
@@ -338,6 +344,9 @@ def update_output(value):
     prevent_initial_call=True,
 )
 def reset_grid(input, xslider, yslider, zslider, browser_data, move_list_reset=True):
+    """
+    Reset the grid.
+    """
     s = jsonpickle.decode(browser_data)
 
     s.xmax = int(xslider)
@@ -375,14 +384,15 @@ def reset_grid(input, xslider, yslider, zslider, browser_data, move_list_reset=T
     State("load-graph-seed", "value"),
     State("prob", "value"),
     State("browser-data", "data"),
+    State("graph-data", "data"),
     prevent_initial_call=True,
 )
-def reset_seed(nclicks, seed_input, prob, browser_data):
+def reset_seed(nclicks, seed_input, prob, browser_data, graphData):
     """
     Randomly measure qubits.
     """
     s = jsonpickle.decode(browser_data)
-
+    G = Grid(s.shape, json=graphData)
     s.p = prob
     D = Holes(s.shape)
     if seed_input:
@@ -634,10 +644,20 @@ def findlattice(nclicks, browser_data, graphData, holeData):
                 hoverinfo="none",
             )
             ui = f"FindLattice: Displaying {click_number+1}/{len(s.cubes)} unit cells found for p = {s.p}, shape = {s.shape}"
+
+            s.lattice = lattice.to_json()
+            s.lattice_edges = lattice_edges.to_json()
     except NameError:
         # cubes, n_cubes is not defined and this is because we didnt compute the offsets.
         ui = "FindLattice: Run RHG Lattice first."
-    return s.log, 1, ui, jsonpickle.encode(s), G.encode(), D.encode()
+    return (
+        s.log,
+        1,
+        ui,
+        jsonpickle.encode(s),
+        G.encode(),
+        D.encode(),
+    )
 
 
 @app.callback(
