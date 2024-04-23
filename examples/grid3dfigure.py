@@ -20,7 +20,9 @@ from helperfunctions import *
 
 # Initialize the state of the user's browsing section
 s = BrowserState()
-f = update_plot(s)
+G = Grid(s.shape)
+D = Holes(s.shape)
+f = update_plot(s, G, D)
 
 styles = {"pre": {"border": "thin lightgrey solid", "overflowX": "scroll"}}
 
@@ -202,15 +204,25 @@ app.layout = html.Div(
         ),
         # dcc.Store stores the intermediate value
         dcc.Store(id="browser-data"),
+        dcc.Store(id="graph-data"),
+        dcc.Store(id="holes-data"),
         html.Div(id="none", children=[], style={"display": "none"}),
     ]
 )
 
 
-@app.callback(Output("browser-data", "data"), Input("none", "children"))
+@app.callback(
+    Output("browser-data", "data"),
+    Output("graph-data", "data"),
+    Output("holes-data", "data"),
+    Input("none", "children"),
+)
 def initial_call(dummy):
     s = BrowserState()
-    return jsonpickle.encode(s)
+    G = Grid(s.shape)
+    D = Holes(s.shape)
+
+    return jsonpickle.encode(s), G.encode(), D.encode()
 
 
 @app.callback(Output("hover-data", "children"), [Input("basic-interactions", "hoverData")])
@@ -223,42 +235,65 @@ def display_hover_data(hoverData):
     Output("draw-plot", "data"),
     Output("ui", "children", allow_duplicate=True),
     Output("browser-data", "data", allow_duplicate=True),
+    Output("graph-data", "data", allow_duplicate=True),
+    Output("holes-data", "data", allow_duplicate=True),
     Input("basic-interactions", "clickData"),
     State("radio-items", "value"),
     State("click-data", "children"),
     State("basic-interactions", "hoverData"),
     State("browser-data", "data"),
+    State("graph-data", "data"),
+    State("holes-data", "data"),
     prevent_initial_call=True,
 )
-def display_click_data(clickData, measurementChoice, clickLog, hoverData, browser_data):
+def display_click_data(
+    clickData, measurementChoice, clickLog, hoverData, browser_data, graphData, holeData
+):
     """
     Updates the browser state if there is a click.
     """
     if not clickData:
-        return dash.no_update, dash.no_update, dash.no_update, dash.no_update
+        return (
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+        )
     point = clickData["points"][0]
-    hover = hoverData["points"][0]
 
     # Do nothing if clicked on edges
     if point["curveNumber"] > 0 or "x" not in point:
-        return dash.no_update, dash.no_update, "", dash.no_update
+        return (
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+        )
     else:
         s = jsonpickle.decode(browser_data)
+        G = Grid(s.shape, json=graphData)
+        D = Holes(s.shape, json=holeData)
+
         i = get_node_index(point["x"], point["y"], point["z"], s.shape)
         # Update the plot based on the node clicked
         if measurementChoice == "Z:Hole":
-            s.D.add_node(i)
+            D.add_node(i)
             measurementChoice = "Z"  # Handle it as if it was Z measurement
         if s.removed_nodes[i] == False:
             s.removed_nodes[i] = True
-            s.G.handle_measurements(i, measurementChoice)
+            G.handle_measurements(i, measurementChoice)
             s.move_list.append([i, measurementChoice])
             ui = f"Clicked on {i} at {get_node_coords(i, s.shape)}"
         s.log.append(f"{i}, {measurementChoice}; ")
         s.log.append(html.Br())
-        # This solves the double click issue.
+
+        # This solves the double click issue
         time.sleep(0.1)
-        return html.P(s.log), i, ui, jsonpickle.encode(s)
+        return html.P(s.log), i, ui, jsonpickle.encode(s), G.encode(), D.encode()
 
 
 @app.callback(
@@ -293,6 +328,8 @@ def update_output(value):
     Output("click-data", "children", allow_duplicate=True),
     Output("ui", "children", allow_duplicate=True),
     Output("browser-data", "data", allow_duplicate=True),
+    Output("graph-data", "data", allow_duplicate=True),
+    Output("holes-data", "data", allow_duplicate=True),
     Input("reset", "n_clicks"),
     State("xmax", "value"),
     State("ymax", "value"),
@@ -307,17 +344,24 @@ def reset_grid(input, xslider, yslider, zslider, browser_data, move_list_reset=T
     s.ymax = int(yslider)
     s.zmax = int(zslider)
     s.shape = [s.xmax, s.ymax, s.zmax]
-    s.G = Grid(s.shape)
+    G = Grid(s.shape)
     s.removed_nodes = np.zeros(s.xmax * s.ymax * s.zmax, dtype=bool)
     s.log = []
     if move_list_reset:
-        s.D = Holes(s.shape)
+        D = Holes(s.shape)
         s.move_list = []
         s.lattice = None
         s.lattice_edges = None
         s.connected_cubes = None
     # Make sure the view/angle stays the same when updating the figure
-    return 1, s.log, "Created grid of shape {}".format(s.shape), jsonpickle.encode(s)
+    return (
+        1,
+        s.log,
+        "Created grid of shape {}".format(s.shape),
+        jsonpickle.encode(s),
+        G.encode(),
+        D.encode(),
+    )
 
 
 @app.callback(
@@ -325,6 +369,8 @@ def reset_grid(input, xslider, yslider, zslider, browser_data, move_list_reset=T
     Output("draw-plot", "data", allow_duplicate=True),
     Output("ui", "children", allow_duplicate=True),
     Output("browser-data", "data", allow_duplicate=True),
+    Output("graph-data", "data", allow_duplicate=True),
+    Output("holes-data", "data", allow_duplicate=True),
     Input("reset-seed", "n_clicks"),
     State("load-graph-seed", "value"),
     State("prob", "value"),
@@ -338,7 +384,7 @@ def reset_seed(nclicks, seed_input, prob, browser_data):
     s = jsonpickle.decode(browser_data)
 
     s.p = prob
-    s.D = Holes(s.shape)
+    D = Holes(s.shape)
     if seed_input:
         # The user has inputted a seed
         random.seed(int(seed_input))
@@ -357,13 +403,13 @@ def reset_seed(nclicks, seed_input, prob, browser_data):
         if random.random() < s.p:
             if s.removed_nodes[i] == False:
                 s.removed_nodes[i] = True
-                s.G.handle_measurements(i, measurementChoice)
+                G.handle_measurements(i, measurementChoice)
                 s.log.append(f"{i}, {measurementChoice}; ")
                 s.log.append(html.Br())
                 s.move_list.append([i, measurementChoice])
-                s.D.add_node(i)
-    s.D.add_edges()
-    return s.log, 1, ui, jsonpickle.encode(s)
+                D.add_node(i)
+    D.add_edges()
+    return s.log, 1, ui, jsonpickle.encode(s), G.encode(), D.encode()
 
 
 @app.callback(
@@ -371,6 +417,8 @@ def reset_seed(nclicks, seed_input, prob, browser_data):
     Output("draw-plot", "data", allow_duplicate=True),
     Output("ui", "children", allow_duplicate=True),
     Output("browser-data", "data", allow_duplicate=True),
+    Output("graph-data", "data", allow_duplicate=True),
+    Output("holes-data", "data", allow_duplicate=True),
     Input("load-graph-button", "n_clicks"),
     State("load-graph-input", "value"),
     State("browser-data", "data"),
@@ -384,11 +432,11 @@ def load_graph_from_string(n_clicks, input_string, browser_data):
 
     for i, measurementChoice in result:
         s.removed_nodes[i] = True
-        s.G.handle_measurements(i, measurementChoice)
+        G.handle_measurements(i, measurementChoice)
         s.log.append(f"{i}, {measurementChoice}; ")
         s.log.append(html.Br())
         s.move_list.append([i, measurementChoice])
-    return s.log, 1, "Graph loaded!", jsonpickle.encode(s)
+    return s.log, 1, "Graph loaded!", jsonpickle.encode(s), G.encode(), D.encode()
 
 
 def process_string(input_string):
@@ -411,8 +459,10 @@ def process_string(input_string):
     Input("plotoptions", "value"),
     State("basic-interactions", "relayoutData"),
     State("browser-data", "data"),
+    State("graph-data", "data"),
+    State("holes-data", "data"),
 )
-def draw_plot(draw_plot, plotoptions, relayoutData, browser_data):
+def draw_plot(draw_plot, plotoptions, relayoutData, browser_data, graphData, holeData):
     """
     Called when ever the plot needs to be drawn.
     """
@@ -420,7 +470,10 @@ def draw_plot(draw_plot, plotoptions, relayoutData, browser_data):
         return dash.no_update
 
     s = jsonpickle.decode(browser_data)
-    fig = update_plot(s, plotoptions=plotoptions)
+    G = Grid(s.shape, json=graphData)
+    D = Holes(s.shape, json=holeData)
+
+    fig = update_plot(s, G, D, plotoptions=plotoptions)
     # Make sure the view/angle stays the same when updating the figure
     # fig.update_layout(scene_camera=camera_state["scene.camera"])
     return fig
@@ -431,11 +484,15 @@ def draw_plot(draw_plot, plotoptions, relayoutData, browser_data):
     Output("draw-plot", "data", allow_duplicate=True),
     Output("ui", "children", allow_duplicate=True),
     Output("browser-data", "data", allow_duplicate=True),
+    Output("graph-data", "data", allow_duplicate=True),
+    Output("holes-data", "data", allow_duplicate=True),
     Input("undo", "n_clicks"),
     State("browser-data", "data"),
+    State("graph-data", "data"),
+    State("holes-data", "data"),
     prevent_initial_call=True,
 )
-def undo_move(n_clicks, browser_data):
+def undo_move(n_clicks, browser_data, graphData, holeData):
     s = jsonpickle.decode(browser_data)
 
     if s.move_list:
@@ -445,10 +502,10 @@ def undo_move(n_clicks, browser_data):
         for move in s.move_list:
             i, measurementChoice = move
             s.removed_nodes[i] = True
-            s.G.handle_measurements(i, measurementChoice)
+            G.handle_measurements(i, measurementChoice)
             s.log.append(f"{i}, {measurementChoice}; ")
             s.log.append(html.Br())
-        return s.log, 1, f"Undo {undo}", jsonpickle.encode(s)
+        return s.log, 1, f"Undo {undo}", jsonpickle.encode(s), G.encode(), D.encode()
     else:
         pass
 
@@ -458,17 +515,23 @@ def undo_move(n_clicks, browser_data):
     Output("draw-plot", "data", allow_duplicate=True),
     Output("ui", "children", allow_duplicate=True),
     Output("browser-data", "data", allow_duplicate=True),
+    Output("graph-data", "data", allow_duplicate=True),
+    Output("holes-data", "data", allow_duplicate=True),
     Input("rhg", "n_clicks"),
     State("browser-data", "data"),
+    State("graph-data", "data"),
+    State("holes-data", "data"),
     prevent_initial_call=True,
 )
-def algorithm1(nclicks, browser_data):
+def algorithm1(nclicks, browser_data, graphData, holeData):
     """
     Create a RHG lattice from a square lattice.
     """
     s = jsonpickle.decode(browser_data)
+    G = Grid(s.shape, json=graphData)
+    D = Holes(s.shape, json=holeData)
 
-    holes = s.D.graph.nodes
+    holes = D.graph.nodes
     hole_locations = np.zeros(8)
     xoffset, yoffset, zoffset = s.offset
 
@@ -489,6 +552,8 @@ def algorithm1(nclicks, browser_data):
     yoffset = np.argmax(hole_locations) // 2
     zoffset = np.argmax(hole_locations) // 4
 
+    s.offset = [xoffset, yoffset, zoffset]
+
     print(f"xoffset, yoffset, zoffset = {(xoffset, yoffset, zoffset)}")
 
     for z in range(s.shape[2]):
@@ -499,16 +564,16 @@ def algorithm1(nclicks, browser_data):
                 ):
                     i = get_node_index(x, y, z, s.shape)
                     if s.removed_nodes[i] == False:
-                        s.G.handle_measurements(i, "Z")
+                        G.handle_measurements(i, "Z")
                         s.log.append(f"{i}, Z; ")
                         s.log.append(html.Br())
                         s.removed_nodes[i] = True
                         s.move_list.append([i, "Z"])
 
-    s.cubes, s.n_cubes = s.D.findlattice(s.removed_nodes, xoffset, yoffset, zoffset)
+    s.cubes, s.n_cubes = D.findlattice(s.removed_nodes, xoffset, yoffset, zoffset)
     ui = f"RHG: Created RHG Lattice."
 
-    return s.log, 1, ui, jsonpickle.encode(s)
+    return s.log, 1, ui, jsonpickle.encode(s), G.encode(), D.encode()
 
 
 @app.callback(
@@ -516,32 +581,38 @@ def algorithm1(nclicks, browser_data):
     Output("draw-plot", "data", allow_duplicate=True),
     Output("ui", "children", allow_duplicate=True),
     Output("browser-data", "data", allow_duplicate=True),
+    Output("graph-data", "data", allow_duplicate=True),
+    Output("holes-data", "data", allow_duplicate=True),
     Input("findlattice", "n_clicks"),
     State("browser-data", "data"),
+    State("graph-data", "data"),
+    State("holes-data", "data"),
     prevent_initial_call=True,
 )
-def findlattice(nclicks, browser_data):
+def findlattice(nclicks, browser_data, graphData, holeData):
     """
     Returns:
     """
     s = jsonpickle.decode(browser_data)
+    G = Grid(s.shape, json=graphData)
+    D = Holes(s.shape, json=holeData)
 
     try:
-        if s.xoffset == None:
+        if s.offset[0] == None:
             # cubes, n_cubes is not defined and this is because we didnt compute the offsets.
             ui = "FindLattice: Run RHG Lattice first."
-            return s.log, 1, ui
+            return s.log, 1, ui, jsonpickle.encode(s), G.encode(), D.encode()
 
-        if n_cubes is None:
-            cubes, n_cubes = s.D.findlattice(s.removed_nodes, s.xoffset, s.yoffset, s.zoffset)
+        if s.n_cubes is None:
+            s.cubes, s.n_cubes = D.findlattice(s.removed_nodes, s.xoffset, s.yoffset, s.zoffset)
 
-        click_number = nclicks % (len(cubes))
+        click_number = nclicks % (len(s.cubes))
 
-        if len(cubes) > 0:
+        if len(s.cubes) > 0:
             C = nx.Graph()
-            C.add_node(tuple(cubes[click_number][0, :]))
+            C.add_node(tuple(s.cubes[click_number][0, :]))
 
-            X = s.D.connected_cube_to_nodes(C)
+            X = D.connected_cube_to_nodes(C)
 
             nodes, edges = nx_to_plot(X, shape=s.shape, index=False)
 
@@ -562,11 +633,11 @@ def findlattice(nclicks, browser_data):
                 line=dict(color="blue", width=2),
                 hoverinfo="none",
             )
-            ui = f"FindLattice: Displaying {click_number+1}/{len(cubes)} unit cells found for p = {s.p}, shape = {s.shape}"
+            ui = f"FindLattice: Displaying {click_number+1}/{len(s.cubes)} unit cells found for p = {s.p}, shape = {s.shape}"
     except NameError:
         # cubes, n_cubes is not defined and this is because we didnt compute the offsets.
         ui = "FindLattice: Run RHG Lattice first."
-    return s.log, 1, ui, jsonpickle.encode(s)
+    return s.log, 1, ui, jsonpickle.encode(s), G.encode(), D.encode()
 
 
 @app.callback(
@@ -574,27 +645,33 @@ def findlattice(nclicks, browser_data):
     Output("draw-plot", "data", allow_duplicate=True),
     Output("ui", "children", allow_duplicate=True),
     Output("browser-data", "data", allow_duplicate=True),
+    Output("graph-data", "data", allow_duplicate=True),
+    Output("holes-data", "data", allow_duplicate=True),
     Input("alg2", "n_clicks"),
     State("browser-data", "data"),
+    State("graph-data", "data"),
+    State("holes-data", "data"),
     prevent_initial_call=True,
 )
-def algorithm2(nclicks, browser_data):
+def algorithm2(nclicks, browser_data, graphData, holeData):
     s = jsonpickle.decode(browser_data)
+    G = Grid(s.shape, json=graphData)
+    D = Holes(s.shape, json=holeData)
 
     try:
         if s.xoffset == None:
             # cubes, n_cubes is not defined and this is because we didnt compute the offsets.
             ui = "FindLattice: Run algorithm 1 first."
-            return s.log, 1, ui
+            return s.log, 1, ui, jsonpickle.encode(s), G.encode(), D.encode()
 
-        C = s.D.build_centers_graph(cubes)
-        connected_cubes = s.D.findconnectedlattice(C)
+        C = D.build_centers_graph(s.cubes)
+        connected_cubes = D.findconnectedlattice(C)
         for i in connected_cubes:
             print(i, len(connected_cubes))
 
         if len(connected_cubes) > 0:
             click_number = nclicks % (len(connected_cubes))
-            X = s.D.connected_cube_to_nodes(connected_cubes[click_number])
+            X = D.connected_cube_to_nodes(connected_cubes[click_number])
 
             nodes, edges = nx_to_plot(X, shape=s.shape, index=False)
 
@@ -622,7 +699,7 @@ def algorithm2(nclicks, browser_data):
         ui = "Alg 2: Run RHG Lattice first."
     except NameError:
         ui = "Alg 2: Run RHG Lattice first."
-    return s.log, 2, ui
+    return s.log, 2, ui, jsonpickle.encode(s), G.encode(), D.encode()
 
 
 @app.callback(
@@ -630,17 +707,23 @@ def algorithm2(nclicks, browser_data):
     Output("draw-plot", "data", allow_duplicate=True),
     Output("ui", "children", allow_duplicate=True),
     Output("browser-data", "data", allow_duplicate=True),
+    Output("graph-data", "data", allow_duplicate=True),
+    Output("holes-data", "data", allow_duplicate=True),
     Input("alg3", "n_clicks"),
     State("browser-data", "data"),
+    State("graph-data", "data"),
+    State("holes-data", "data"),
     prevent_initial_call=True,
 )
-def algorithm3(nclicks, browser_data):
+def algorithm3(nclicks, browser_data, graphData, holeData):
     """
     Find a path from the top of the grid to the bottom of the grid.
     """
     s = jsonpickle.decode(browser_data)
+    G = Grid(s.shape, json=graphData)
+    D = Holes(s.shape, json=holeData)
 
-    gnx = s.G.to_networkx()
+    gnx = G.to_networkx()
 
     removed_nodes_reshape = s.removed_nodes.reshape((s.xmax, s.ymax, s.zmax))
 
@@ -683,7 +766,7 @@ def algorithm3(nclicks, browser_data):
     )
 
     ui = "Alg 3 ran"
-    return s.log, 1, ui, jsonpickle.encode(s)
+    return s.log, 1, ui, jsonpickle.encode(s), G.encode(), D.encode()
 
 
 @app.callback(
@@ -691,20 +774,24 @@ def algorithm3(nclicks, browser_data):
     Output("draw-plot", "data", allow_duplicate=True),
     Output("ui", "children", allow_duplicate=True),
     Output("browser-data", "data", allow_duplicate=True),
+    Output("graph-data", "data", allow_duplicate=True),
+    Output("holes-data", "data", allow_duplicate=True),
     Input("repair", "n_clicks"),
     State("browser-data", "data"),
+    State("graph-data", "data"),
+    State("holes-data", "data"),
     prevent_initial_call=True,
 )
-def repairgrid(nclicks, browser_data):
+def repairgrid(nclicks, browser_data, graphData, holeData):
     s = jsonpickle.decode(browser_data)
 
-    repairs, failures = s.D.repair_grid(s.p)
+    repairs, failures = D.repair_grid(s.p)
 
     reset_grid(nclicks, s.xmax, s.ymax, s.zmax, move_list_reset=False)
     for f in failures:
         i = get_node_index(*f, s.shape)
         s.removed_nodes[i] = True
-        s.G.handle_measurements(i, "Z")
+        G.handle_measurements(i, "Z")
         s.log.append(f"{i}, Z; ")
         s.log.append(html.Br())
         s.move_list.append([i, "Z"])
@@ -714,7 +801,7 @@ def repairgrid(nclicks, browser_data):
         ui = f"Repairs = {len(repairs)}, Failures = {len(failures)} Repair Rate = {rate:.2f}, Holes = {np.sum(s.removed_nodes)}, peff={np.sum(s.removed_nodes)/(s.xmax*s.ymax*s.zmax)}"
     else:
         ui = "All qubits repaired!"
-    return s.log, 2, ui, jsonpickle.encode(s)
+    return s.log, 2, ui, jsonpickle.encode(s), G.encode(), D.encode()
 
 
 app.run_server(debug=True, use_reloader=False)

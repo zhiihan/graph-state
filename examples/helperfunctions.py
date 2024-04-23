@@ -120,13 +120,13 @@ def taxicab_metric(node1, node2):
     return np.sum(np.abs(x1 - x2))
 
 
-def update_plot(s, plotoptions=["Qubits", "Holes", "Lattice"]):
+def update_plot(s, g, d, plotoptions=["Qubits", "Holes", "Lattice"]):
     """
     Main function that updates the plot.
     """
 
-    gnx = s.G.to_networkx()
-    hnx = s.D.to_networkx()
+    gnx = g.to_networkx()
+    hnx = d.to_networkx()
 
     for i, value in enumerate(s.removed_nodes):
         if value == True:
