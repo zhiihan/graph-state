@@ -11,9 +11,9 @@ class BrowserState:
     """
 
     def __init__(self) -> None:
-        self.xmax = 7
-        self.ymax = 7
-        self.zmax = 7
+        self.xmax = 3
+        self.ymax = 3
+        self.zmax = 3
 
         self.shape = [self.xmax, self.ymax, self.zmax]
 

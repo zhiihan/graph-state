@@ -15,6 +15,7 @@ import jsonpickle
 import jsonpickle.ext.numpy as jsonpickle_numpy
 
 jsonpickle_numpy.register_handlers()
+
 from helperfunctions import *
 
 # Initialize the state of the user's browsing section
@@ -201,8 +202,15 @@ app.layout = html.Div(
         ),
         # dcc.Store stores the intermediate value
         dcc.Store(id="browser-data"),
+        html.Div(id="none", children=[], style={"display": "none"}),
     ]
 )
+
+
+@app.callback(Output("browser-data", "data"), Input("none", "children"))
+def initial_call(dummy):
+    s = BrowserState()
+    return jsonpickle.encode(s)
 
 
 @app.callback(Output("hover-data", "children"), [Input("basic-interactions", "hoverData")])
@@ -218,22 +226,24 @@ def display_hover_data(hoverData):
     Input("basic-interactions", "clickData"),
     State("radio-items", "value"),
     State("click-data", "children"),
+    State("basic-interactions", "hoverData"),
     State("browser-data", "data"),
     prevent_initial_call=True,
 )
-def display_click_data(clickData, measurementChoice, clickLog, browser_data):
+def display_click_data(clickData, measurementChoice, clickLog, hoverData, browser_data):
     """
     Updates the browser state if there is a click.
     """
-    if browser_data is not None:
-        s = jsonpickle.decode(browser_data)
     if not clickData:
-        return dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update
     point = clickData["points"][0]
-    # Do something only for a specific trace
+    hover = hoverData["points"][0]
+
+    # Do nothing if clicked on edges
     if point["curveNumber"] > 0 or "x" not in point:
-        return dash.no_update, dash.no_update, "", jsonpickle.encode(s)
+        return dash.no_update, dash.no_update, "", dash.no_update
     else:
+        s = jsonpickle.decode(browser_data)
         i = get_node_index(point["x"], point["y"], point["z"], s.shape)
         # Update the plot based on the node clicked
         if measurementChoice == "Z:Hole":
@@ -246,27 +256,27 @@ def display_click_data(clickData, measurementChoice, clickLog, browser_data):
             ui = f"Clicked on {i} at {get_node_coords(i, s.shape)}"
         s.log.append(f"{i}, {measurementChoice}; ")
         s.log.append(html.Br())
+        # This solves the double click issue.
+        time.sleep(0.1)
         return html.P(s.log), i, ui, jsonpickle.encode(s)
 
 
 @app.callback(
     Output("relayout-data", "children"),
-    Output("browser-data", "data"),
     Input("basic-interactions", "relayoutData"),
     State("relayout-data", "children"),
     State("browser-data", "data"),
+    prevent_initial_call=True,
 )
 def display_relayout_data(relayoutData, camera, browser_data):
     if browser_data is not None:
         s = jsonpickle.decode(browser_data)
-    else:
-        s = BrowserState()
 
     if relayoutData and "scene.camera" in relayoutData:
         s.camera_state = relayoutData
-        return json.dumps(relayoutData, indent=2), jsonpickle.encode(s)
+        return json.dumps(relayoutData, indent=2)
     else:
-        return camera, jsonpickle.encode(s)
+        return camera
 
 
 @app.callback(
@@ -279,7 +289,7 @@ def update_output(value):
 
 
 @app.callback(
-    Output("basic-interactions", "figure", allow_duplicate=True),
+    Output("draw-plot", "data", allow_duplicate=True),
     Output("click-data", "children", allow_duplicate=True),
     Output("ui", "children", allow_duplicate=True),
     Output("browser-data", "data", allow_duplicate=True),
@@ -299,7 +309,6 @@ def reset_grid(input, xslider, yslider, zslider, browser_data, move_list_reset=T
     s.shape = [s.xmax, s.ymax, s.zmax]
     s.G = Grid(s.shape)
     s.removed_nodes = np.zeros(s.xmax * s.ymax * s.zmax, dtype=bool)
-    fig = update_plot(s)
     s.log = []
     if move_list_reset:
         s.D = Holes(s.shape)
@@ -308,7 +317,7 @@ def reset_grid(input, xslider, yslider, zslider, browser_data, move_list_reset=T
         s.lattice_edges = None
         s.connected_cubes = None
     # Make sure the view/angle stays the same when updating the figure
-    return fig, s.log, "Created grid of shape {}".format(s.shape), jsonpickle.encode(s)
+    return 1, s.log, "Created grid of shape {}".format(s.shape), jsonpickle.encode(s)
 
 
 @app.callback(
@@ -397,26 +406,24 @@ def process_string(input_string):
 
 
 @app.callback(
-    Output("basic-interactions", "figure", allow_duplicate=True),
-    Output("browser-data", "data", allow_duplicate=True),
+    Output("basic-interactions", "figure"),
     Input("draw-plot", "data"),
     Input("plotoptions", "value"),
     State("basic-interactions", "relayoutData"),
     State("browser-data", "data"),
-    prevent_initial_call=True,
 )
 def draw_plot(draw_plot, plotoptions, relayoutData, browser_data):
     """
     Called when ever the plot needs to be drawn.
     """
     if browser_data is None:
-        return dash.no_update, dash.no_update
+        return dash.no_update
 
     s = jsonpickle.decode(browser_data)
     fig = update_plot(s, plotoptions=plotoptions)
     # Make sure the view/angle stays the same when updating the figure
     # fig.update_layout(scene_camera=camera_state["scene.camera"])
-    return fig, jsonpickle.encode(s)
+    return fig
 
 
 @app.callback(
@@ -498,8 +505,7 @@ def algorithm1(nclicks, browser_data):
                         s.removed_nodes[i] = True
                         s.move_list.append([i, "Z"])
 
-    global cubes, n_cubes
-    cubes, n_cubes = s.D.findlattice(s.removed_nodes, xoffset, yoffset, zoffset)
+    s.cubes, s.n_cubes = s.D.findlattice(s.removed_nodes, xoffset, yoffset, zoffset)
     ui = f"RHG: Created RHG Lattice."
 
     return s.log, 1, ui, jsonpickle.encode(s)
