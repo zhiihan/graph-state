@@ -347,7 +347,7 @@ def reset_grid(input, xslider, yslider, zslider, browser_data, move_list_reset=T
     """
     Reset the grid.
     """
-    s = jsonpickle.decode(browser_data)
+    S = BrowserState()
 
     s.xmax = int(xslider)
     s.ymax = int(yslider)
@@ -712,6 +712,9 @@ def algorithm2(nclicks, browser_data, graphData, holeData):
                 line=dict(color="blue", width=2),
                 hoverinfo="none",
             )
+
+            s.lattice = lattice.to_json()
+            s.lattice_edges = lattice_edges.to_json()
             ui = f"Alg 2: Displaying {click_number+1}/{len(connected_cubes)}, unit cells = {len(connected_cubes[click_number].nodes)}, edges = {len(connected_cubes[click_number].edges)}"
         else:
             ui = f"Alg 2: No cubes found"
@@ -784,6 +787,9 @@ def algorithm3(nclicks, browser_data, graphData, holeData):
         line=dict(color="blue", width=2),
         hoverinfo="none",
     )
+
+    s.lattice = lattice.to_json()
+    s.lattice_edges = lattice_edges.to_json()
 
     ui = "Alg 3 ran"
     return s.log, 1, ui, jsonpickle.encode(s), G.encode(), D.encode()
