@@ -186,7 +186,7 @@ app.layout = html.Div(
                             )
                         ),
                         html.Button("Undo", id="undo"),
-                        html.Button("Run Algorithm 1", id="alg1"),
+                        html.Button("RHG Lattice", id="rhg"),
                         html.Button("Find Lattice", id="findlattice"),
                         html.Button("Run Algorithm 2", id="alg2"),
                         html.Button("Repair Lattice", id="repair"),
@@ -312,6 +312,8 @@ app.layout = html.Div(
                 ),
             ],
         ),
+        # dcc.Store stores the intermediate value
+        dcc.Store(id="intermediate-value"),
     ]
 )
 
@@ -539,10 +541,13 @@ def undo_move(n_clicks):
     Output("click-data", "children", allow_duplicate=True),
     Output("draw-plot", "data", allow_duplicate=True),
     Output("ui", "children", allow_duplicate=True),
-    Input("alg1", "n_clicks"),
+    Input("rhg", "n_clicks"),
     prevent_initial_call=True,
 )
 def algorithm1(nclicks):
+    """
+    Create a RHG lattice from a square lattice.
+    """
     holes = D.graph.nodes
     hole_locations = np.zeros(8)
     global xoffset, yoffset, zoffset, removed_nodes
@@ -582,7 +587,7 @@ def algorithm1(nclicks):
 
     global cubes, n_cubes
     cubes, n_cubes = D.findlattice(removed_nodes, xoffset, yoffset, zoffset)
-    ui = f"Alg 1: Found {int(n_cubes[0])} unit cells. Offsets = {(xoffset, yoffset, zoffset)}"
+    ui = f"RHG: Created RHG Lattice."
 
     return log, 1, ui
 
@@ -603,12 +608,11 @@ def findlattice(nclicks):
     try:
         if xoffset == None:
             # cubes, n_cubes is not defined and this is because we didnt compute the offsets.
-            ui = "FindLattice: Run algorithm 1 first."
+            ui = "FindLattice: Run RHG Lattice first."
             return log, 1, ui
 
         if n_cubes is None:
             cubes, n_cubes = D.findlattice(removed_nodes, xoffset, yoffset, zoffset)
-        # assert len(defect_box) == len(measurements_list)
 
         click_number = nclicks % (len(cubes))
 
@@ -640,7 +644,7 @@ def findlattice(nclicks):
             ui = f"FindLattice: Displaying {click_number+1}/{len(cubes)} unit cells found for p = {p}, shape = {shape}"
     except NameError:
         # cubes, n_cubes is not defined and this is because we didnt compute the offsets.
-        ui = "FindLattice: Run algorithm 1 first."
+        ui = "FindLattice: Run RHG Lattice first."
     return log, 1, ui
 
 
@@ -691,9 +695,9 @@ def algorithm2(nclicks):
         else:
             ui = f"Alg 2: No cubes found"
     except TypeError:
-        ui = "Alg 2: Run Algorithm 1 first."
+        ui = "Alg 2: Run RHG Lattice first."
     except NameError:
-        ui = "Alg 2: Run Algorithm 1 first."
+        ui = "Alg 2: Run RHG Lattice first."
     return log, 2, ui
 
 
