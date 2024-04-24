@@ -53,7 +53,7 @@ class Holes:
                     if not ((x_diff[0] == 2) or (x_diff[1] == 2) or (x_diff[2] == 2)):
                         self.graph.add_edge(i, j)
 
-    def findlattice(self, removed_nodes, xoffset, yoffset, zoffset, max_scale=1):
+    def find_lattice(self, removed_nodes, xoffset, yoffset, zoffset, max_scale=1):
         """
         Find a raussendorf lattice.
 
@@ -135,7 +135,7 @@ class Holes:
         C.add_edges_from(edges)
         return C
 
-    def findmaxconnectedlattice(self, C):
+    def find_max_connected_lattice(self, C):
         """
         Returns the largest subgraph.
         Input: A connected cube: networkx Graph object that is a graph of centers
@@ -165,7 +165,7 @@ class Holes:
                     X.add_edge(n, n2)
         return X
 
-    def findconnectedlattice(self, C):
+    def find_connected_lattice(self, C):
         """
         Returns the largest subgraph.
         Input: Graph of centers C

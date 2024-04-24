@@ -76,11 +76,11 @@ app.layout = html.Div(
                             )
                         ),
                         html.Button("Undo", id="undo"),
-                        html.Button("RHG Lattice", id="rhg"),
+                        html.Button("RHG Lattice", id="alg1"),
                         html.Button("Find Lattice", id="findlattice"),
-                        html.Button("Run Algorithm 2", id="alg2"),
+                        html.Button("Find Clusters", id="alg2"),
                         html.Button("Repair Lattice", id="repair"),
-                        html.Button("Run Alg 3", id="alg3"),
+                        html.Button("Find Percolation", id="alg3"),
                         html.Pre(id="click-data", style=styles["pre"]),
                     ],
                     className="three columns",
@@ -301,6 +301,7 @@ def display_click_data(
 
 @app.callback(
     Output("relayout-data", "children"),
+    Output("browser-data", "data", allow_duplicate=True),
     Input("basic-interactions", "relayoutData"),
     State("relayout-data", "children"),
     State("browser-data", "data"),
@@ -315,9 +316,9 @@ def display_relayout_data(relayoutData, camera, browser_data):
 
     if relayoutData and "scene.camera" in relayoutData:
         s.camera_state = relayoutData
-        return json.dumps(relayoutData, indent=2)
+        return json.dumps(relayoutData, indent=2), jsonpickle.encode(s)
     else:
-        return camera
+        return camera, jsonpickle.encode(s)
 
 
 @app.callback(
@@ -427,7 +428,14 @@ def reset_seed(nclicks, seed_input, prob, browser_data, graphData):
 )
 def load_graph_from_string(n_clicks, input_string, browser_data):
     s = jsonpickle.decode(browser_data)
-    reset_grid(n_clicks, s.xmax, s.ymax, s.zmax, browser_data)
+    shape = s.shape
+
+    s = BrowserState()
+    G = Grid(s.shape)
+    D = Holes(s.shape)
+
+    s.xmax, s.ymax, s.zmax = shape[0], shape[1], shape[2]
+    s.shape = shape
 
     result = process_string(input_string)
 
@@ -476,7 +484,8 @@ def draw_plot(draw_plot, plotoptions, relayoutData, browser_data, graphData, hol
 
     fig = update_plot(s, G, D, plotoptions=plotoptions)
     # Make sure the view/angle stays the same when updating the figure
-    # fig.update_layout(scene_camera=camera_state["scene.camera"])
+    if "scene.camera" in relayoutData:
+        fig.update_layout(scene_camera=s.camera_state["scene.camera"])
     return fig
 
 
@@ -521,7 +530,7 @@ def undo_move(n_clicks, browser_data, graphData, holeData):
     Output("browser-data", "data", allow_duplicate=True),
     Output("graph-data", "data", allow_duplicate=True),
     Output("holes-data", "data", allow_duplicate=True),
-    Input("rhg", "n_clicks"),
+    Input("alg1", "n_clicks"),
     State("browser-data", "data"),
     State("graph-data", "data"),
     State("holes-data", "data"),
@@ -574,7 +583,7 @@ def algorithm1(nclicks, browser_data, graphData, holeData):
                         s.removed_nodes[i] = True
                         s.move_list.append([i, "Z"])
 
-    s.cubes, s.n_cubes = D.findlattice(s.removed_nodes, xoffset, yoffset, zoffset)
+    s.cubes, s.n_cubes = D.find_lattice(s.removed_nodes, xoffset, yoffset, zoffset)
     ui = f"RHG: Created RHG Lattice."
 
     return s.log, 1, ui, jsonpickle.encode(s), G.encode(), D.encode()
@@ -593,7 +602,7 @@ def algorithm1(nclicks, browser_data, graphData, holeData):
     State("holes-data", "data"),
     prevent_initial_call=True,
 )
-def findlattice(nclicks, browser_data, graphData, holeData):
+def find_lattice(nclicks, browser_data, graphData, holeData):
     """
     Returns:
     """
@@ -608,7 +617,7 @@ def findlattice(nclicks, browser_data, graphData, holeData):
             return s.log, 1, ui, jsonpickle.encode(s), G.encode(), D.encode()
 
         if s.n_cubes is None:
-            s.cubes, s.n_cubes = D.findlattice(s.removed_nodes, s.xoffset, s.yoffset, s.zoffset)
+            s.cubes, s.n_cubes = D.find_lattice(s.removed_nodes, s.xoffset, s.yoffset, s.zoffset)
 
         click_number = nclicks % (len(s.cubes))
 
@@ -667,7 +676,7 @@ def findlattice(nclicks, browser_data, graphData, holeData):
     State("holes-data", "data"),
     prevent_initial_call=True,
 )
-def algorithm2(nclicks, browser_data, graphData, holeData):
+def find_cluster(nclicks, browser_data, graphData, holeData):
     s = jsonpickle.decode(browser_data)
     G = Grid(s.shape, json=graphData)
     D = Holes(s.shape, json=holeData)
@@ -675,11 +684,11 @@ def algorithm2(nclicks, browser_data, graphData, holeData):
     try:
         if s.offset[0] == None:
             # cubes, n_cubes is not defined and this is because we didnt compute the offsets.
-            ui = "FindLattice: Run algorithm 1 first."
+            ui = "FindLattice: Run RHG Lattice first."
             return s.log, 1, ui, jsonpickle.encode(s), G.encode(), D.encode()
 
         C = D.build_centers_graph(s.cubes)
-        connected_cubes = D.findconnectedlattice(C)
+        connected_cubes = D.find_connected_lattice(C)
         for i in connected_cubes:
             print(i, len(connected_cubes))
 
@@ -709,13 +718,13 @@ def algorithm2(nclicks, browser_data, graphData, holeData):
 
             s.lattice = lattice.to_json()
             s.lattice_edges = lattice_edges.to_json()
-            ui = f"Alg 2: Displaying {click_number+1}/{len(connected_cubes)}, unit cells = {len(connected_cubes[click_number].nodes)}, edges = {len(connected_cubes[click_number].edges)}"
+            ui = f"FindCluster: Displaying {click_number+1}/{len(connected_cubes)}, unit cells = {len(connected_cubes[click_number].nodes)}, edges = {len(connected_cubes[click_number].edges)}"
         else:
-            ui = f"Alg 2: No cubes found"
+            ui = f"FindCluster: No cubes found."
     except TypeError:
-        ui = "Alg 2: Run RHG Lattice first."
+        ui = "FindCluster: Run RHG Lattice first."
     except NameError:
-        ui = "Alg 2: Run RHG Lattice first."
+        ui = "FindCluster: Run RHG Lattice first."
     return s.log, 2, ui, jsonpickle.encode(s), G.encode(), D.encode()
 
 
@@ -732,7 +741,7 @@ def algorithm2(nclicks, browser_data, graphData, holeData):
     State("holes-data", "data"),
     prevent_initial_call=True,
 )
-def algorithm3(nclicks, browser_data, graphData, holeData):
+def find_percolation(nclicks, browser_data, graphData, holeData):
     """
     Find a path from the top of the grid to the bottom of the grid.
     """
@@ -785,7 +794,7 @@ def algorithm3(nclicks, browser_data, graphData, holeData):
     s.lattice = lattice.to_json()
     s.lattice_edges = lattice_edges.to_json()
 
-    ui = f"Found percolation from z = 0 to z = {s.zmax}"
+    ui = f"Found percolation from z = 0, {get_node_coords(i, shape=s.shape)} to z = {s.zmax}, {get_node_coords(j, shape=s.shape)}"
     return s.log, 1, ui, jsonpickle.encode(s), G.encode(), D.encode()
 
 

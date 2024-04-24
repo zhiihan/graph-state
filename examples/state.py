@@ -38,7 +38,6 @@ class BrowserState:
             }
         }
 
-        self.move_list = []
         self.offset = [None, None, None]
         self.xoffset, self.yoffset, self.zoffset = self.offset
         self.ncubes = None

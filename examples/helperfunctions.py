@@ -223,4 +223,6 @@ def update_plot(s, g, d, plotoptions=["Qubits", "Holes", "Lattice"]):
         scene_camera=s.camera_state["scene.camera"],
         legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
     )
+
+    print(s.camera_state)
     return fig
