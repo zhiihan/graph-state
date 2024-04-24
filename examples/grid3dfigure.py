@@ -352,6 +352,7 @@ def reset_grid(input, xslider, yslider, zslider):
     s.ymax = int(yslider)
     s.zmax = int(zslider)
     s.shape = [s.xmax, s.ymax, s.zmax]
+    s.removed_nodes = np.zeros(s.xmax * s.ymax * s.zmax, dtype=bool)
     G = Grid(s.shape)
     D = Holes(s.shape)
     # Make sure the view/angle stays the same when updating the figure
