@@ -521,7 +521,14 @@ def undo_move(n_clicks, browser_data, graphData, holeData):
             s.log.append(html.Br())
         return s.log, 1, f"Undo {undo}", jsonpickle.encode(s), G.encode(), D.encode()
     else:
-        pass
+        return (
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+            dash.no_update,
+        )
 
 
 @app.callback(
