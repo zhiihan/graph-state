@@ -519,12 +519,12 @@ def undo_move(n_clicks, browser_data, graphData, holeData):
             G.handle_measurements(i, measurementChoice)
             s.log.append(f"{i}, {measurementChoice}; ")
             s.log.append(html.Br())
-        return s.log, 1, f"Undo {undo}", jsonpickle.encode(s), G.encode(), D.encode()
+        return s.log, 1, f"Undo: {undo}", jsonpickle.encode(s), G.encode(), D.encode()
     else:
         return (
             dash.no_update,
             dash.no_update,
-            dash.no_update,
+            "Undo: No move to undo.",
             dash.no_update,
             dash.no_update,
             dash.no_update,
