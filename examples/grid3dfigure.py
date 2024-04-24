@@ -340,28 +340,19 @@ def update_output(value):
     State("xmax", "value"),
     State("ymax", "value"),
     State("zmax", "value"),
-    State("browser-data", "data"),
     prevent_initial_call=True,
 )
-def reset_grid(input, xslider, yslider, zslider, browser_data, move_list_reset=True):
+def reset_grid(input, xslider, yslider, zslider):
     """
     Reset the grid.
     """
-    S = BrowserState()
-
+    s = BrowserState()
+    G = Grid(s.shape)
+    D = Holes(s.shape)
     s.xmax = int(xslider)
     s.ymax = int(yslider)
     s.zmax = int(zslider)
     s.shape = [s.xmax, s.ymax, s.zmax]
-    G = Grid(s.shape)
-    s.removed_nodes = np.zeros(s.xmax * s.ymax * s.zmax, dtype=bool)
-    s.log = []
-    if move_list_reset:
-        D = Holes(s.shape)
-        s.move_list = []
-        s.lattice = None
-        s.lattice_edges = None
-        s.connected_cubes = None
     # Make sure the view/angle stays the same when updating the figure
     return (
         1,
@@ -436,7 +427,7 @@ def reset_seed(nclicks, seed_input, prob, browser_data, graphData):
 )
 def load_graph_from_string(n_clicks, input_string, browser_data):
     s = jsonpickle.decode(browser_data)
-    reset_grid(n_clicks, s.xmax, s.ymax, s.zmax)
+    reset_grid(n_clicks, s.xmax, s.ymax, s.zmax, browser_data)
 
     result = process_string(input_string)
 
@@ -506,7 +497,10 @@ def undo_move(n_clicks, browser_data, graphData, holeData):
     s = jsonpickle.decode(browser_data)
 
     if s.move_list:
-        reset_grid(n_clicks, s.xmax, s.ymax, s.zmax, move_list_reset=False)
+        # Soft reset
+        G = Grid(s.shape)
+        s.removed_nodes = np.zeros(s.xmax * s.ymax * s.zmax, dtype=bool)
+        s.log = []
 
         undo = s.move_list.pop(-1)
         for move in s.move_list:
@@ -679,7 +673,7 @@ def algorithm2(nclicks, browser_data, graphData, holeData):
     D = Holes(s.shape, json=holeData)
 
     try:
-        if s.xoffset == None:
+        if s.offset[0] == None:
             # cubes, n_cubes is not defined and this is because we didnt compute the offsets.
             ui = "FindLattice: Run algorithm 1 first."
             return s.log, 1, ui, jsonpickle.encode(s), G.encode(), D.encode()
@@ -759,14 +753,14 @@ def algorithm3(nclicks, browser_data, graphData, holeData):
     path = None
     while path is None:
         try:
-            i = get_node_index(*x[path_clicks % len(x)], 0, s.shape)
-            j = get_node_index(*y[path_clicks // len(x)], s.zmax - 1, s.shape)
+            i = get_node_index(*x[s.path_clicks % len(x)], 0, s.shape)
+            j = get_node_index(*y[s.path_clicks // len(x)], s.zmax - 1, s.shape)
             path = nx.shortest_path(gnx, i, j)
         except nx.exception.NetworkXNoPath:
             ui = "No path."
             print(f"no path, {i}, {j}")
         finally:
-            path_clicks += 1
+            s.path_clicks += 1
 
     nodes, edges = path_to_plot(path, s.shape)
 
@@ -804,16 +798,18 @@ def algorithm3(nclicks, browser_data, graphData, holeData):
     Output("holes-data", "data", allow_duplicate=True),
     Input("repair", "n_clicks"),
     State("browser-data", "data"),
-    State("graph-data", "data"),
     State("holes-data", "data"),
     prevent_initial_call=True,
 )
-def repairgrid(nclicks, browser_data, graphData, holeData):
+def repair_grid(nclicks, browser_data, holeData):
     s = jsonpickle.decode(browser_data)
+    D = Holes(s.shape, json=holeData)
 
     repairs, failures = D.repair_grid(s.p)
 
-    reset_grid(nclicks, s.xmax, s.ymax, s.zmax, move_list_reset=False)
+    G = Grid(s.shape)
+    s.removed_nodes = np.zeros(s.xmax * s.ymax * s.zmax, dtype=bool)
+    s.log = []
     for f in failures:
         i = get_node_index(*f, s.shape)
         s.removed_nodes[i] = True
@@ -827,7 +823,7 @@ def repairgrid(nclicks, browser_data, graphData, holeData):
         ui = f"Repairs = {len(repairs)}, Failures = {len(failures)} Repair Rate = {rate:.2f}, Holes = {np.sum(s.removed_nodes)}, peff={np.sum(s.removed_nodes)/(s.xmax*s.ymax*s.zmax)}"
     else:
         ui = "All qubits repaired!"
-    return s.log, 2, ui, jsonpickle.encode(s), G.encode(), D.encode()
+    return s.log, 1, ui, jsonpickle.encode(s), G.encode(), D.encode()
 
 
 app.run_server(debug=True, use_reloader=False)
