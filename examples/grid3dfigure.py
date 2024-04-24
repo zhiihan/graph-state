@@ -348,12 +348,12 @@ def reset_grid(input, xslider, yslider, zslider):
     Reset the grid.
     """
     s = BrowserState()
-    G = Grid(s.shape)
-    D = Holes(s.shape)
     s.xmax = int(xslider)
     s.ymax = int(yslider)
     s.zmax = int(zslider)
     s.shape = [s.xmax, s.ymax, s.zmax]
+    G = Grid(s.shape)
+    D = Holes(s.shape)
     # Make sure the view/angle stays the same when updating the figure
     return (
         1,
