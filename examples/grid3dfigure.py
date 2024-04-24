@@ -785,7 +785,7 @@ def algorithm3(nclicks, browser_data, graphData, holeData):
     s.lattice = lattice.to_json()
     s.lattice_edges = lattice_edges.to_json()
 
-    ui = "Alg 3 ran"
+    ui = f"Found percolation from z = 0 to z = {s.zmax}"
     return s.log, 1, ui, jsonpickle.encode(s), G.encode(), D.encode()
 
 
