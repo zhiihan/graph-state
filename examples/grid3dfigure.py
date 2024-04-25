@@ -69,19 +69,38 @@ app.layout = html.Div(
                         dcc.Markdown(
                             d(
                                 """
-                **Move Log**
+                                **Algorithms**
 
-                Click on points in the graph.
-            """
+                                Click on points in the graph.
+                            """
                             )
                         ),
-                        html.Button("Undo", id="undo"),
                         html.Button("RHG Lattice", id="alg1"),
                         html.Button("Find Lattice", id="findlattice"),
-                        html.Button("Find Clusters", id="alg2"),
-                        html.Button("Repair Lattice", id="repair"),
+                        html.Button("Find Cluster", id="alg2"),
+                        html.Button("Repair Grid", id="repair"),
                         html.Button("Find Percolation", id="alg3"),
-                        html.Pre(id="click-data", style=styles["pre"]),
+                        dcc.Markdown(
+                            d(
+                                """
+                                **Move Log**
+
+                                Click on points in the graph.
+                            """
+                            )
+                        ),
+                        html.Div(
+                            [
+                                dcc.Clipboard(
+                                    target_id="click-data",
+                                    style={
+                                        "fontSize": 20,
+                                    },
+                                ),
+                                html.Pre(id="click-data", style=styles["pre"]),
+                            ],
+                            style={"height": "400px", "overflowY": "scroll"},
+                        ),
                     ],
                     className="three columns",
                 ),
@@ -153,6 +172,7 @@ app.layout = html.Div(
                                     id="zmax",
                                 ),
                                 html.Button("Reset Grid", id="reset"),
+                                html.Button("Undo", id="undo"),
                             ]
                         ),
                         dcc.Markdown(
