@@ -1,7 +1,8 @@
 import plotly.graph_objects as go
-from grid import Grid
-from holes import Holes
-from state import BrowserState
+from app.utils import *
+from app.grid import *
+from app.state import *
+from app.holes import *
 import json
 from textwrap import dedent as d
 import dash
@@ -16,7 +17,6 @@ import jsonpickle.ext.numpy as jsonpickle_numpy
 
 jsonpickle_numpy.register_handlers()
 
-from helperfunctions import *
 
 # Initialize the state of the user's browsing section
 s = BrowserState()

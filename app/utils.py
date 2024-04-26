@@ -1,6 +1,4 @@
 import numpy as np
-from graph_state import GraphState
-from collections import Counter
 import plotly.graph_objects as go
 from plotly.io import from_json
 

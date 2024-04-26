@@ -1,8 +1,5 @@
 import numpy as np
-import networkx as nx
-from helperfunctions import *
-from grid import Grid
-from holes import Holes
+from app.utils import *
 
 
 class BrowserState:
@@ -33,7 +30,7 @@ class BrowserState:
             "scene.camera": {
                 "up": {"x": 0, "y": 0, "z": 1},
                 "center": {"x": 0, "y": 0, "z": 0},
-                "eye": {"x": 1.8999654712209553, "y": 1.8999654712209548, "z": 1.8999654712209553},
+                "eye": {"x": 1.4, "y": 1.4, "z": 1.3},
                 "projection": {"type": "perspective"},
             }
         }
