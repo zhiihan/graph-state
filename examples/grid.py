@@ -2,6 +2,7 @@ from graph_state import GraphState
 from collections import Counter
 import numpy as np
 import networkx as nx
+from helperfunctions import *
 
 class Grid(GraphState):
     def __init__(self, shape):
@@ -9,8 +10,6 @@ class Grid(GraphState):
         super().__init__(self.shape[0]*self.shape[1]*self.shape[2])
 
         self.edges = [] 
-        self.removed_nodes = []
-        self.generate_node_coords()
         self.generate_cube_edges()
 
         for i in range(self.shape[0]*self.shape[1]*self.shape[2]):
@@ -19,46 +18,28 @@ class Grid(GraphState):
         for e in self.edges:
             self.add_edge(*e)
 
-    def get_node_index(self, x, y, z):
-        return x + y * self.shape[1] + z * self.shape[1] * self.shape[2]
-
     def generate_cube_edges(self):
-        # Generate edges along the height
-        for z in range(self.shape[2]):
-            for y in range(self.shape[1]):
-                for x in range(self.shape[0] - 1):
-                    start_node = self.get_node_index(x, y, z)
-                    end_node = self.get_node_index(x + 1, y, z)
-                    self.edges.append((start_node, end_node))
+        edges = []
+        nx, ny, nz = self.shape
+        num_nodes = nx * ny * nz
 
-        # Generate edges along the width
-        for z in range(self.shape[2]):
-            for y in range(self.shape[1] - 1):
-                for x in range(self.shape[0]):
-                    start_node = self.get_node_index(x, y, z)
-                    end_node = self.get_node_index(x, y + 1, z)
-                    self.edges.append((start_node, end_node))
+        # Generate edges along the x-axis
+        for i in range(num_nodes):
+            if (i % nx) < (nx - 1):
+                edges.append((i, i + 1))
 
-        # Generate edges along the length
-        for z in range(self.shape[2] - 1):
-            for y in range(self.shape[1]):
-                for x in range(self.shape[0]):
-                    start_node = self.get_node_index(x, y, z)
-                    end_node = self.get_node_index(x, y, z + 1)
-                    self.edges.append((start_node, end_node))
+        # Generate edges along the y-axis
+        for i in range(num_nodes):
+            if (i % (nx * ny)) < (nx * (ny - 1)):
+                edges.append((i, i + nx))
 
-    def generate_node_coords(self):
-        """
-        Get node coordinates.
-        """
-        self.node_coords = {}
+        # Generate edges along the z-axis
+        for i in range(num_nodes):
+            if (i + nx * ny) < num_nodes:
+                edges.append((i, i + nx * ny))
 
-        for z in range(self.shape[2]):
-            for y in range(self.shape[1]):
-                for x in range(self.shape[0]):
-                    self.node_coords.update({
-                        self.get_node_index(x, y, z) : np.array([x, y, z])
-                    })      
+        self.edges = edges
+        return  
 
     def adjaencyMatrix(self):
         return nx.to_numpy_array(self.to_networkx())

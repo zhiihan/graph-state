@@ -19,5 +19,5 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    install_requires=['networkx', 'numpy', 'matplotlib']
+    install_requires=['networkx', 'numpy', 'matplotlib', 'dash']
 )

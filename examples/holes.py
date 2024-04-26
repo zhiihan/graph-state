@@ -1,71 +1,29 @@
 import networkx as nx
 import numpy as np
 from helperfunctions import *
+import time
 
 class Holes:
     def __init__(self, shape):
         self.shape = shape
-        self.node_coords = {}
         self.graph = nx.Graph()
-
-    def get_node_index(self, x, y, z):
-        return x + y * self.shape[1] + z * self.shape[1] * self.shape[2]
-
-    def get_node_coords(self, i):
-        index_x = i % self.shape[0]
-        index_y = (i // self.shape[0]) % self.shape[1]
-        index_z = (i // (self.shape[0] * self.shape[1])) % self.shape[2]
-        return np.array([index_x, index_y, index_z])
+        self.big_arrays()
 
     def add_node(self, i):
-        self.node_coords.update({
-            i : get_node_coords(i, self.shape)
-        })
-        self.graph.add_node(i)
+        self.graph.add_node(tuple(get_node_coords(i, shape=self.shape)))
 
-    def are_nodes_connected(self, node1, node2):
-        x1 = np.array(self.node_coords[node1])
-        x2 = np.array(self.node_coords[node2])
-
-        if np.sum(np.abs(x1 - x2)) == 1:
-            return True
-        else:
-            return False
-
-    def add_edges(self):
-        for n in self.graph.nodes:
-            for n2 in self.graph.nodes:
-                if self.are_nodes_connected(n, n2):
+    def add_edges(self, double_hole=False):
+        nodes = list(self.graph.nodes)
+        for index, n in enumerate(nodes):
+            for n2 in nodes[index:]:
+                if taxicab_metric(n, n2) == 1:
                     self.graph.add_edge(n, n2)
-        self.double_hole()
+        if double_hole:
+            self.double_hole()
 
     def to_networkx(self):
         self.add_edges()
         return self.graph
-
-    def return_plot_data(self):
-        x_nodes = [self.node_coords[j][0] for j in self.graph.nodes] # x-coordinates of nodes
-        y_nodes = [self.node_coords[j][1] for j in self.graph.nodes] # y-coordinates
-        z_nodes = [self.node_coords[j][2] for j in self.graph.nodes] # z-coordinates
-
-        #we need to create lists that contain the starting and ending coordinates of each edge.
-        x_edges=[]
-        y_edges=[]
-        z_edges=[]
-
-        #need to fill these with all of the coordinates
-        for edge in self.graph.edges:
-            #format: [beginning,ending,None]
-            x_coords = [self.node_coords[edge[0]][0],self.node_coords[edge[1]][0],None]
-            x_edges += x_coords
-
-            y_coords = [self.node_coords[edge[0]][1],self.node_coords[edge[1]][1],None]
-            y_edges += y_coords
-
-            z_coords = [self.node_coords[edge[0]][2],self.node_coords[edge[1]][2],None]
-            z_edges += z_coords
-        
-        return [x_nodes, y_nodes, z_nodes], [x_edges, y_edges, z_edges]
 
     def double_hole(self):
         """
@@ -77,128 +35,228 @@ class Holes:
 
         #self.double_holes = nx.Graph()
 
-        for i in self.node_coords.keys():
-            for j in self.node_coords.keys():
-                x_diff = np.abs(np.array(self.node_coords[i]) - np.array(self.node_coords[j]))
+        for i in self.graph.nodes():
+            for j in self.graph.nodes():
+                x_diff = np.abs(np.array(i) - np.array(j))
                 if np.sum(x_diff) == 2:
                     if not ((x_diff[0] == 2) or (x_diff[1] == 2) or (x_diff[2] == 2)):
-                        #self.double_holes.add_node(tuple(h))
-                        #self.double_holes.add_node(tuple(i))
-                        #self.double_holes.add_edge(tuple(h), tuple(i))
                         self.graph.add_edge(i, j)
-        #print('doubleholes at ', self.double_holes.edges)
     
-    def findlattice(self, removed_nodes, xoffset = 0, yoffset = 0):
+    def findlattice(self, removed_nodes, xoffset, yoffset, zoffset, max_scale = 1):
         """
         Find a raussendorf lattice.
+
+        Returns: cubes: a list containing a cube:
+
+            cube: np.array with shape (19, 3) containing the (x, y, z, scale)
+            at [0, :] contains the center of the cube
+
+            n_cubes = the number of cubes found per dimension
+        
         """
-        
-        self.cube = [np.array([0, -1, -1]),
-                np.array([-1, 0, -1]),
-                np.array([0, 0, -1]),
-                np.array([0, 1, -1]),
-                np.array([1, 0, -1]),
-                np.array([-1, -1, 0]),
-                np.array([0, -1, 0]),
-                np.array([-1, 0, 0]),
-                np.array([-1, 1, 0]),
-                np.array([0, 1, 0]),
-                np.array([1, 1, 0]),
-                np.array([1, 0, 0]),
-                np.array([1, -1, 0]),
-                np.array([0, -1, 1]),
-                np.array([-1, 0, 1]),
-                np.array([0, 0, 1]),
-                np.array([1, 0, 1]),
-                np.array([0, 1, 1])]
-        
+               
         scale = 1
         cubes = []
-        centers = [np.array([x, y, z]) for z in range(self.shape[2]) for y in range(self.shape[1]) for x in range(self.shape[0])
-                if ((x + xoffset) % 2 == z % 2) and ((y + yoffset) % 2 == z % 2)]
+        centers = [np.array([x, y, z], dtype=int) for z in range(self.shape[2]) for y in range(self.shape[1]) for x in range(self.shape[0])
+                if ((x + xoffset) % 2 == (z + zoffset) % 2) and ((y + yoffset) % 2 == (z + zoffset) % 2)]
 
-        cubes_scales = np.zeros((self.shape[0]//2))
+        n_cubes = np.zeros((self.shape[0]//2))
 
-        while scale < self.shape[0]:
+        while scale <= max_scale:
             for c in centers:
-                for cube_node in self.cube:
-                    arr = c + cube_node*scale
+                for cube_vec in self.cube:
+                    arr = c + cube_vec*scale
                     index = get_node_index(*arr, shape=self.shape)
-                    #filter out nodes that are measured
-                    if (index in removed_nodes):
-                        break
                     #filter out boundary cases
-                    if (np.any(arr <= 0)) or (np.any(arr >= self.shape[0])):
+                    if np.any((arr < 0) | np.greater_equal(arr, self.shape)):
                         break
+                    #filter out nodes that are measured
+                    if removed_nodes[index]:
+                        break
+
                 else:
-                    cube = np.empty((18, 4))
-                    for i, cube_node in enumerate(self.cube):
-                        cube[i, :3] = c + cube_node*scale
-                        cube[i,  3] = scale 
-                    cubes_scales[scale-1] += 1
+                    cube = np.empty((19, 3), dtype=int)
+                    """
+                    Format:
+                    cube[0, :] = center of the cube
+                    cube[:19, :] = coordinates
+                    """
+                    cube[0, :] = c
+                    for i, cube_vec in enumerate(self.cube):
+                        cube[i+1, :3] = c + cube_vec*scale
+                        #cube[i,  3] = scale 
+                    n_cubes[scale-1] += 1
                     cubes.append(cube)
-                    #print(f"scale = {scale}, center = {c}")
             scale += 1
     
-        return cubes, cubes_scales
+        return cubes, n_cubes
     
+    def build_centers_graph(self, cubes):
+        """
+        Extract the data from the numpy array.
 
-    def findlatticefast(self, removed_nodes, xoffset = 0, yoffset = 0):
+        Returns: the graph of centers C
         """
-        Find a raussendorf lattice.
+        C = nx.Graph() # C is an object that contains all the linked centers
+
+        centers = np.zeros(self.shape, dtype=bool) #boolean array that contains whether the node exists or not
+        for index, c in enumerate(cubes):
+            x, y, z = c[0, :]
+            centers[x, y, z] = True
+            C.add_node(tuple(c[0, :]))
+
+        edges = []
+        for c in cubes:
+            for v in (self.taxicab2 + self.taxicab3):
+                n = c[0, :] + v #check if distance 2 or 3 node exists
+                if centers[n[0], n[1], n[2]]:
+                    n1 = tuple(c[0, :])
+                    n2 = tuple(n)
+                    edges.append((n1, n2))
+
+        C.add_edges_from(edges)
+        return C
+    
+    def findmaxconnectedlattice(self, C): 
         """
+        Returns the largest subgraph.
+        Input: A connected cube: networkx Graph object that is a graph of centers
+        Each node is a tuple (x, y, z)
+        """
+        try:
+            largest_cc = max(nx.connected_components(C), key=len)
+        except ValueError:
+            largest_cc = nx.Graph()
+        return largest_cc
+    
+    def connected_cube_to_nodes(self, connected_cube):
+        """
+        Input: A connected cube: networkx Graph object that is a graph of centers
+        Each node is a tuple (x, y, z)
+        """
+        X = nx.Graph() # X is the same object as C but it contains the actual verticies. 
         
+        for node in connected_cube.nodes():
+            for cube_vec in self.cube:
+                X.add_node(tuple(node + cube_vec))
+        
+        nodes = list(X.nodes)
+        for index, n in enumerate(nodes):
+            for n2 in nodes[index:]:
+                if taxicab_metric(n, n2) == 1:
+                    X.add_edge(n, n2)
+        return X
+    
+    def findconnectedlattice(self, C): 
+        """
+        Returns the largest subgraph.
+        Input: Graph of centers C
+        C contains tuples of coordinates (x, y, z) which is the center of a unit cell.
+        """
+
+        connected_cubes = [C.subgraph(c).copy() for c in nx.connected_components(C)]
+        return connected_cubes
+    
+    def repair_grid(self, p):
+        """
+        Naive algorithm.
+        """
+        D = self.graph
+        connected_holes = [D.subgraph(d).copy() for d in nx.connected_components(D)]
+
+        weakmeasures = set()
+        for subgraph in connected_holes: # Loop over all subgraphs
+            for n in subgraph.nodes: #Loop over all nodes in a subgraph
+                for boxvec in self.box: #For each node, find the vector up/down/left/right/front/back
+                    arr = np.array(n) + boxvec 
+                    if np.any((arr < 0) | np.greater_equal(arr, self.shape)):
+                        continue
+                    # If this vector is not in the list of weak measurements, add it
+                    if tuple(arr) not in weakmeasures: 
+                        weakmeasures.add(tuple(arr))
+
+        repairs, failures = self.repair(weakmeasures, p)
+        return repairs, failures
+
+    def repair(self, weakmeasures, p): 
+        """
+        Given some weak measurements, roll p.
+        """
+        D = nx.Graph()
+        
+        failures = []
+        repairs = []
+        for i in weakmeasures:
+            if np.random.uniform() < p:
+                D.add_node(i)
+                failures.append(i)
+            else:
+                repairs.append(i)
+        self.graph = D 
+        return repairs, failures
+        
+        
+
+    def big_arrays(self):
+        self.taxicab2 = [np.array([-2,  0,  0], dtype=int),
+        np.array([-1, -1,  0], dtype=int),
+        np.array([-1,  0, -1], dtype=int),
+        np.array([-1,  0,  1], dtype=int),
+        np.array([-1,  1,  0], dtype=int),
+        np.array([ 0, -2,  0], dtype=int),
+        np.array([ 0, -1, -1], dtype=int),
+        np.array([ 0, -1,  1], dtype=int),
+        np.array([ 0,  0, -2], dtype=int),
+        np.array([ 0,  1, -1], dtype=int),
+        np.array([0, 1, 1], dtype=int),
+        np.array([ 1, -1,  0], dtype=int),
+        np.array([ 1,  0, -1], dtype=int),
+        np.array([1, 0, 1], dtype=int),
+        np.array([1, 1, 0], dtype=int)]
+
+        self.taxicab3 = [np.array([-2, -1,  0], dtype=int),
+        np.array([-2,  0, -1], dtype=int),
+        np.array([-2,  0,  1], dtype=int),
+        np.array([-2,  1,  0], dtype=int),
+        np.array([-1, -2,  0], dtype=int),
+        np.array([-1, -1, -1], dtype=int),
+        np.array([-1, -1,  1], dtype=int),
+        np.array([-1,  0, -2], dtype=int),
+        np.array([-1,  1, -1], dtype=int),
+        np.array([-1,  1,  1], dtype=int),
+        np.array([ 0, -2, -1], dtype=int),
+        np.array([ 0, -2,  1], dtype=int),
+        np.array([ 0, -1, -2], dtype=int),
+        np.array([ 0,  1, -2], dtype=int),
+        np.array([ 1, -2,  0], dtype=int),
+        np.array([ 1, -1, -1], dtype=int),
+        np.array([ 1, -1,  1], dtype=int),
+        np.array([ 1,  0, -2], dtype=int),
+        np.array([ 1,  1, -1], dtype=int),
+        np.array([1, 1, 1], dtype=int)]
+
         self.cube = [np.array([0, -1, -1]),
-                np.array([-1, 0, -1]),
-                np.array([0, 0, -1]),
-                np.array([0, 1, -1]),
-                np.array([1, 0, -1]),
-                np.array([-1, -1, 0]),
-                np.array([0, -1, 0]),
-                np.array([-1, 0, 0]),
-                np.array([-1, 1, 0]),
-                np.array([0, 1, 0]),
-                np.array([1, 1, 0]),
-                np.array([1, 0, 0]),
-                np.array([1, -1, 0]),
-                np.array([0, -1, 1]),
-                np.array([-1, 0, 1]),
-                np.array([0, 0, 1]),
-                np.array([1, 0, 1]),
-                np.array([0, 1, 1])]
-        
-        scale = 1
-        centers = [np.array([x, y, z]) for z in range(self.shape[2]) for y in range(self.shape[1]) for x in range(self.shape[0])
-                if ((x + xoffset) % 2 == z % 2) and ((y + yoffset) % 2 == z % 2)]
-        print(len(centers), 'centers')
-        cubes_scales = np.zeros((self.shape[0]//2), dtype=int)
+        np.array([-1, 0, -1]),
+        np.array([0, 0, -1]),
+        np.array([0, 1, -1]),
+        np.array([1, 0, -1]),
+        np.array([-1, -1, 0]),
+        np.array([0, -1, 0]),
+        np.array([-1, 0, 0]),
+        np.array([-1, 1, 0]),
+        np.array([0, 1, 0]),
+        np.array([1, 1, 0]),
+        np.array([1, 0, 0]),
+        np.array([1, -1, 0]),
+        np.array([0, -1, 1]),
+        np.array([-1, 0, 1]),
+        np.array([0, 0, 1]),
+        np.array([1, 0, 1]),
+        np.array([0, 1, 1])]
 
-        removed_nodes_set = set(removed_nodes)
-
-        #while scale < self.shape[0]:
-        t = 0
-        import time 
-        time_delta = time.time()
-        while scale < (self.shape[0]//2):
-            t = 0
-            for c in centers:
-                for cube_node in self.cube:
-                    arr = c + cube_node*scale
-                    index = get_node_index(*arr, shape=self.shape)
-                    #filter out nodes that are measured
-                    if index in removed_nodes_set:
-                        break
-                    #filter out boundary cases
-                    if (np.any(arr <= 0)) or (np.any(arr >= self.shape[0])):
-                        break
-                else:
-                    #append the size of the cube for now
-                    cubes_scales[scale - 1] += 1
-                if t % 1000 == 0:
-                    print(f"{np.sum(cubes_scales)}, found, {t/len(centers)*100}% finished, scale = {scale/(self.shape[0]//2)*100}%")
-                    print(time.time() - time_delta)
-                    time_delta = time.time()
-                t += 1
-            scale += 2
-            
-        return cubes_scales
+        self.box = [np.array([1, 0, 0]),
+        np.array([-1, 0, 0]),
+        np.array([0, 1, 0]),
+        np.array([0, -1, 0]),
+        np.array([0, 0, 1]),
+        np.array([0, 0, -1]),]
