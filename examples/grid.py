@@ -4,18 +4,29 @@ import numpy as np
 import networkx as nx
 from helperfunctions import *
 
+
 class Grid(GraphState):
-    def __init__(self, shape):
-        self.shape = shape
-        super().__init__(self.shape[0]*self.shape[1]*self.shape[2])
+    """
+    Create a Grid object from a GraphState object.
+    """
 
-        self.edges = [] 
-        self.generate_cube_edges()
+    def __init__(self, shape, json=None):
+        # Decoding from nx_object:
+        if json:
+            self.graph = nx.node_link_graph(json)
+        elif shape:
+            self.shape = shape
+            edges = self.generate_cube_edges()
+            self.graph = nx.from_edgelist(edges)
+        else:
+            raise NotImplementedError
 
-        for i in range(self.shape[0]*self.shape[1]*self.shape[2]):
+        super().__init__(self.graph.order())
+
+        for i in range(self.graph.order()):
             self.h(i)
-        
-        for e in self.edges:
+
+        for e in self.graph.edges:
             self.add_edge(*e)
 
     def generate_cube_edges(self):
@@ -37,14 +48,13 @@ class Grid(GraphState):
         for i in range(num_nodes):
             if (i + nx * ny) < num_nodes:
                 edges.append((i, i + nx * ny))
-
-        self.edges = edges
-        return  
+        return edges
 
     def adjaencyMatrix(self):
         return nx.to_numpy_array(self.to_networkx())
 
     def handle_measurements(self, i, basis):
-        self.measure(i, basis=basis)        
-        
+        self.measure(i, basis=basis)
 
+    def encode(self):
+        return nx.node_link_data(self.to_networkx())
