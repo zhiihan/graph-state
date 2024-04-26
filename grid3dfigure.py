@@ -29,6 +29,8 @@ styles = {"pre": {"border": "thin lightgrey solid", "overflowX": "scroll"}}
 external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
+server = app.server
+
 app.layout = html.Div(
     [
         dcc.Graph(id="basic-interactions", figure=f),
@@ -863,4 +865,5 @@ def repair_grid(nclicks, browser_data, holeData):
     return s.log, 1, ui, jsonpickle.encode(s), G.encode(), D.encode()
 
 
-app.run_server(debug=True, use_reloader=False)
+if __name__ == "__main__":
+    app.run(debug=True)
