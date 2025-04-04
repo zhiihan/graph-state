@@ -1,4 +1,4 @@
-# MBQSim (Measurement-Based Quantum Simulator)
+# ClusterSim
 
 A cluster state simulator for measurement-based quantum computation, in browser.
 
