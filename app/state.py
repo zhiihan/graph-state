@@ -4,7 +4,8 @@ from app.utils import *
 
 class BrowserState:
     """
-    This class contains a local state of the web app, representing the state on the user's local browsing section.
+    This class contains a local state of the web app,
+    representing the state on the user's local browsing section.
     """
 
     def __init__(self) -> None:

@@ -3,15 +3,35 @@ import plotly.graph_objects as go
 from plotly.io import from_json
 
 
-def get_node_index(x, y, z, shape):
+def get_node_index(x: int, y: int, z: int, shape: np.ndarray):
+    """
+    Convert coordinates into node indexes.
+
+    Args:
+        x, y, z: coordinates of the given node.
+        shape: np.ndarray
+
+    Returns:
+        The node index at the given coordinates.
+    """
     return x + y * shape[0] + z * shape[1] * shape[0]
 
 
 def get_node_coords(i, shape):
+    """
+    Convert coordinates into node indexes.
+
+    Args:
+        i: the node index.
+        shape: np.ndarray
+
+    Returns:
+        The (x, y, z) coordinates of the given node index.
+    """
     index_x = i % shape[0]
     index_y = (i // shape[0]) % shape[1]
     index_z = (i // (shape[0] * shape[1])) % shape[2]
-    return [index_x, index_y, index_z]
+    return (index_x, index_y, index_z)
 
 
 def nx_to_plot(graph, shape, index=True):
