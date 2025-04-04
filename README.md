@@ -6,10 +6,17 @@ A cluster state simulator for measurement-based quantum computation, in browser.
 
 ## Installation
 
-To run, use:
+To install with pip, use:
 
-1. `pip install -r requirements.txt`
-2. `python grid3dfigure.py`
+`pip install -r requirements.txt`
+
+To install with conda, make an empty conda environment, and then run:
+
+`conda install --file requirements.txt`
+
+After installation, run 
+
+`python grid3dfigure.py`
 
 ### Graph State
 
