@@ -1,24 +1,15 @@
-# Gottesman-Knill Theorem
+# MBQSim (Measurement-Based Quantum Simulator)
 
-> A quantum circuit using only the following elements can be simulated efficiently on a classical computer:
-> 1. Preperation of qubits in computational basis states.
-> 2. Quantum gates from the Clifford group (Hadamard, CNOT and the Phase gate).
-> 3. Measurement in the computational basis.
+A cluster state simulator for measurement-based quantum computation, in browser.
 
-## Applications
+> Based on the paper 'Fast simulation of stabilizer circuits using a graph state representation' by Simon Anders and Hans J. Briegel ([here](https://arxiv.org/abs/quant-ph/0504117v2))
 
-* Entanglement Purification ([this paper](https://arxiv.org/abs/quant-ph/0512218))
-* Quantum Error Correction
+## Installation
 
-## Implementation
+To run, use:
 
-> See 'Fast simulation of stabilizer circuits using a graph state representation' by Simon Anders and Hans J. Briegel ([here](https://arxiv.org/abs/quant-ph/0504117v2))
-
-### History
-
-* The standard proof (as in the old Quantum Computing and Quantum Information) carries out the simulation in the time $\mathcal{O}(n^3)$, where $n$ is the number of qubits. Cubic scaling renders the simulation intractable for large numbers of qubits (as when entanglement purification is applied and when concatenating error correcting codes).
-* Aaronson and Gottesman present a new algorithm (and implementation, CHP) in 'Improved simulation of stabilizer circuits' (2004). This brought an algorithm that scales in space and time only quadratically. This can be used for systems of thousands of qubits.
-* Still, an even better algorithm was shown in the paper refered above, with time and space complexity of $\mathcal{O}(n \log n)$. This can be used for over a million qubits.
+1. `pip install -r requirements.txt`
+2. `python grid3dfigure.py`
 
 ### Graph State
 
@@ -31,14 +22,3 @@ These were introduced in the paper about entanglement purification ([here](https
 * The standard approach is to store a tableau of stabillzer operators (an $n \times n$ matrix of Pauli operators).
 * The improved algorithm needs only the graph state and the list of VOPs, and requires space $\mathcal{O}(n \log n)$.
 * To then change the state, measurement is studied in [this paper](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.69.062311), and gate application in [the paper mentioned above](https://arxiv.org/pdf/quant-ph/0504117v2.pdf).
-
-## Definitions
-
-### Clifford Group
-
-> The Clifford group $\mathcal{C}_n$ on $n$ qubits is the normalizer of the Pauli group $\mathcal{P}_n$:
-> $$
-> \mathcal { C } _ { n } = \left\{ U \in S U \left( 2 ^ { n } \right) | U P U ^ { \dagger } \in \mathcal { P } _ { n } \quad \forall P \in \mathcal { P } _ { n } \right\},\\
-> \mathcal{P}_n = \{\pm1, \pm i\} \cdot \{I, X, Y, Z\}^{\otimes n}.
-> $$
->
