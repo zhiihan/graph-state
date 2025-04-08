@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class state:
     def __init__(self, num_qubits):
         self.n = num_qubits
@@ -8,7 +9,7 @@ class state:
 
     def h(self, a):
         for i in range(2 * self.n):
-            self.phase[i] ^= (self.tableau[i, a] * self.tableau[i , self.n * a])
+            self.phase[i] ^= self.tableau[i, a] * self.tableau[i, self.n * a]
 
             # Swap x_ia with z_ia
             # There is probably a better way to do this
@@ -18,13 +19,17 @@ class state:
 
     def s(self, a):
         for i in range(2 * self.n):
-            self.phase[i] ^= (self.tableau[i, a] * self.tableau[i , self.n * a])
+            self.phase[i] ^= self.tableau[i, a] * self.tableau[i, self.n * a]
             self.tableau[i, self.n + a] ^= self.tableau[i, a]
 
     # a = control, b = target
     def cx(self, a, b):
         for i in range(2 * self.n):
-            self.phase[i] ^= self.tableau[i, a] * self.tableau[i, self.n + a] * (self.tableau[i, b] ^ self.tableau[i, self.n + a] ^ 1)
+            self.phase[i] ^= (
+                self.tableau[i, a]
+                * self.tableau[i, self.n + a]
+                * (self.tableau[i, b] ^ self.tableau[i, self.n + a] ^ 1)
+            )
             self.tableau[i, b] ^= self.tableau[i, a]
             self.tableau[i, self.n + a] ^= self.tableau[i, self.n + b]
 
@@ -32,16 +37,15 @@ class state:
         found = False
 
         for p in range(self.n, 2 * self.n):
-            if self.tableau[p, a] = 1:
+            if self.tableau[p, a] == 1:
                 if found:
                     found = min(p, found)
                 else:
                     found = p
 
-        
-
     def __str__(self):
         return np.array2string(self.tableau)
+
 
 s = state(3)
 s.h(0)

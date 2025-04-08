@@ -1,5 +1,5 @@
 import numpy as np
-from app.utils import *
+from clustersim.utils import *
 
 
 class BrowserState:

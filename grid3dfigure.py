@@ -1,8 +1,14 @@
 import plotly.graph_objects as go
-from app.utils import *
-from app.grid import *
-from app.state import *
-from app.holes import *
+
+from clustersim.state import BrowserState
+from clustersim.grid import Grid, Holes
+from clustersim.utils import (
+    update_plot,
+    get_node_coords,
+    get_node_index,
+    path_to_plot,
+    nx_to_plot,
+)
 import json
 from textwrap import dedent as d
 import dash
@@ -16,7 +22,6 @@ import jsonpickle
 import jsonpickle.ext.numpy as jsonpickle_numpy
 
 jsonpickle_numpy.register_handlers()
-
 
 # Initialize the state of the user's browsing section
 s = BrowserState()
@@ -119,7 +124,10 @@ app.layout = html.Div(
                             )
                         ),
                         dcc.RadioItems(
-                            ["Z", "Y", "X", "Z:Hole"], "Z", id="radio-items", inline=True
+                            ["Z", "Y", "X", "Z:Hole"],
+                            "Z",
+                            id="radio-items",
+                            inline=True,
                         ),
                         dcc.Markdown(
                             d(
@@ -154,7 +162,10 @@ app.layout = html.Div(
                                     15,
                                     step=1,
                                     value=s.xmax,
-                                    tooltip={"placement": "bottom", "always_visible": True},
+                                    tooltip={
+                                        "placement": "bottom",
+                                        "always_visible": True,
+                                    },
                                     id="xmax",
                                 ),
                                 dcc.Slider(
@@ -162,7 +173,10 @@ app.layout = html.Div(
                                     15,
                                     step=1,
                                     value=s.ymax,
-                                    tooltip={"placement": "bottom", "always_visible": True},
+                                    tooltip={
+                                        "placement": "bottom",
+                                        "always_visible": True,
+                                    },
                                     id="ymax",
                                 ),
                                 dcc.Slider(
@@ -170,7 +184,10 @@ app.layout = html.Div(
                                     15,
                                     step=1,
                                     value=s.zmax,
-                                    tooltip={"placement": "bottom", "always_visible": True},
+                                    tooltip={
+                                        "placement": "bottom",
+                                        "always_visible": True,
+                                    },
                                     id="zmax",
                                 ),
                                 html.Button("Reset Grid", id="reset"),
@@ -197,7 +214,11 @@ app.layout = html.Div(
                         html.Div(
                             [
                                 html.Button("Damage Grid", id="reset-seed"),
-                                dcc.Input(id="load-graph-seed", type="number", placeholder="Seed"),
+                                dcc.Input(
+                                    id="load-graph-seed",
+                                    type="number",
+                                    placeholder="Seed",
+                                ),
                             ]
                         ),
                         html.Div(
@@ -250,7 +271,9 @@ def initial_call(dummy):
     return jsonpickle.encode(s), G.encode(), D.encode()
 
 
-@app.callback(Output("hover-data", "children"), [Input("basic-interactions", "hoverData")])
+@app.callback(
+    Output("hover-data", "children"), [Input("basic-interactions", "hoverData")]
+)
 def display_hover_data(hoverData):
     return json.dumps(hoverData, indent=2)
 
@@ -647,7 +670,9 @@ def find_lattice(nclicks, browser_data, graphData, holeData):
             return s.log, 1, ui, jsonpickle.encode(s), G.encode(), D.encode()
 
         if s.n_cubes is None:
-            s.cubes, s.n_cubes = D.find_lattice(s.removed_nodes, s.xoffset, s.yoffset, s.zoffset)
+            s.cubes, s.n_cubes = D.find_lattice(
+                s.removed_nodes, s.xoffset, s.yoffset, s.zoffset
+            )
 
         click_number = nclicks % (len(s.cubes))
 
@@ -786,8 +811,12 @@ def find_percolation(nclicks, browser_data, graphData, holeData):
     zeroplane = removed_nodes_reshape[:, :, 0]
     zmaxplane = removed_nodes_reshape[:, :, s.zmax - 1]
 
-    x = np.argwhere(zeroplane == 0)  # This is the coordinates of all valid node in z = 0
-    y = np.argwhere(zmaxplane == 0)  # This is the coordinates of all valid node in z = L
+    x = np.argwhere(
+        zeroplane == 0
+    )  # This is the coordinates of all valid node in z = 0
+    y = np.argwhere(
+        zmaxplane == 0
+    )  # This is the coordinates of all valid node in z = L
 
     path = None
     while path is None:

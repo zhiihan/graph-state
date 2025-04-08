@@ -1,6 +1,62 @@
+from clustersim.backend import GraphState
 import networkx as nx
 import numpy as np
-from app.utils import *
+from clustersim.utils import get_node_coords, get_node_index, taxicab_metric
+
+
+class Grid(GraphState):
+    """
+    Create a Grid object from a GraphState object.
+    """
+
+    def __init__(self, shape, json=None):
+        # Decoding from nx_object:
+        if json:
+            self.graph = nx.node_link_graph(json)
+        elif shape:
+            self.shape = shape
+            edges = self.generate_cube_edges()
+            self.graph = nx.from_edgelist(edges)
+        else:
+            raise NotImplementedError
+
+        super().__init__(self.graph.order())
+
+        for i in range(self.graph.order()):
+            self.h(i)
+
+        for e in self.graph.edges:
+            self.add_edge(*e)
+
+    def generate_cube_edges(self):
+        edges = []
+        nx, ny, nz = self.shape
+        num_nodes = nx * ny * nz
+
+        # Generate edges along the x-axis
+        for i in range(num_nodes):
+            if (i % nx) < (nx - 1):
+                edges.append((i, i + 1))
+
+        # Generate edges along the y-axis
+        for i in range(num_nodes):
+            if (i % (nx * ny)) < (nx * (ny - 1)):
+                edges.append((i, i + nx))
+
+        # Generate edges along the z-axis
+        for i in range(num_nodes):
+            if (i + nx * ny) < num_nodes:
+                edges.append((i, i + nx * ny))
+        return edges
+
+    def adjaencyMatrix(self):
+        return nx.to_numpy_array(self.to_networkx())
+
+    def handle_measurements(self, i, basis):
+        self.measure(i, basis=basis)
+
+    def encode(self):
+        return nx.node_link_data(self.to_networkx())
 
 
 class Holes:
@@ -72,7 +128,8 @@ class Holes:
             for z in range(self.shape[2])
             for y in range(self.shape[1])
             for x in range(self.shape[0])
-            if ((x + xoffset) % 2 == (z + zoffset) % 2) and ((y + yoffset) % 2 == (z + zoffset) % 2)
+            if ((x + xoffset) % 2 == (z + zoffset) % 2)
+            and ((y + yoffset) % 2 == (z + zoffset) % 2)
         ]
 
         n_cubes = np.zeros((self.shape[0] // 2))
@@ -151,7 +208,9 @@ class Holes:
         Input: A connected cube: networkx Graph object that is a graph of centers
         Each node is a tuple (x, y, z)
         """
-        X = nx.Graph()  # X is the same object as C but it contains the actual verticies.
+        X = (
+            nx.Graph()
+        )  # X is the same object as C but it contains the actual verticies.
 
         for node in connected_cube.nodes():
             for cube_vec in self.cube:
@@ -186,7 +245,9 @@ class Holes:
             for n in subgraph.nodes:  # Loop over all nodes in a subgraph
                 for (
                     boxvec
-                ) in self.box:  # For each node, find the vector up/down/left/right/front/back
+                ) in (
+                    self.box
+                ):  # For each node, find the vector up/down/left/right/front/back
                     arr = np.array(n) + boxvec
                     if np.any((arr < 0) | np.greater_equal(arr, self.shape)):
                         continue
